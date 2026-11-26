@@ -502,8 +502,13 @@ function fireW() {
 }
 function fireP(tx, ty) {
   const s = G.ship;
-  if (G.pCharge < 1) { ftext(s.x, s.y - 34, '충전 중…', '#ffb27a', 10); return; }
-  G.pCharge = 0;
+  if (G.pCharge < 1 || G.interlock > 0) {
+    // not ready: remember the spot and fire the moment the charge is full
+    G.pQueue = { x: tx, y: ty };
+    G.cross = { x: tx, y: ty, t: 0, queued: true };
+    return;
+  }
+  G.pCharge = 0; G.pQueue = null;
   const d = dist(s.x, s.y - 26, tx, ty);
   G.bullets.push({ type: 'p', x: s.x, y: s.y - 26, tx, ty, vx: (tx - s.x) / d * 640, vy: (ty - s.y + 26) / d * 640, hits: new Set(), mask: 0, left: d });
   G.cross = { x: tx, y: ty, t: 0 };
@@ -597,7 +602,11 @@ function update(dt) {
   for (const o of G.oars) o.flash = Math.max(0, o.flash - dt);
   G.shake = Math.max(0, G.shake - dt);
   G.hintT -= dt;
-  if (G.cross) { G.cross.t += dt; if (G.cross.t > 0.9) G.cross = null; }
+  if (G.cross) {
+    G.cross.t += dt;
+    if (G.cross.queued && !G.pQueue) G.cross = null;
+    else if (!G.cross.queued && G.cross.t > 0.9) G.cross = null;
+  }
   if (ending) return;
 
   const s = G.ship;
@@ -639,6 +648,8 @@ function update(dt) {
 
   // firing
   G.pCharge = Math.min(1, G.pCharge + dt / 1.0);
+  if (G.pQueue && G.weapon !== 'p') G.pQueue = null;
+  if (G.pQueue && G.pCharge >= 1 && G.interlock <= 0) fireP(G.pQueue.x, G.pQueue.y);
   G.waterOn = false;
   if (G.interlock <= 0) {
     G.fireT -= dt;
@@ -788,7 +799,7 @@ cv.addEventListener('pointerdown', e => {
   const p = toLogical(e);
   const info = { sx: p.x, sy: p.y, t: performance.now(), moved: 0, shipX: G.ship.x, shipY: G.ship.y };
   ptrs.set(e.pointerId, info);
-  if (dragId === null) dragId = e.pointerId;
+  if (dragId === null) { dragId = e.pointerId; info.dragOwner = e.pointerId; }
   try { cv.setPointerCapture(e.pointerId); } catch (_) {}
 });
 cv.addEventListener('pointermove', e => {
@@ -808,7 +819,9 @@ function endPtr(e) {
   if (e.pointerId === dragId) dragId = null;
   if (!info || state !== 'play') return;
   const p = toLogical(e);
-  if (performance.now() - info.t < 260 && info.moved < 12 && G.weapon === 'p' && p.y > HUD_H && p.y < IMG_BOTTOM) {
+  const isTap = performance.now() - info.t < 500 && info.moved < 24;
+  if (isTap && G.weapon === 'p' && p.y > HUD_H && p.y < G.ship.y - 30) {
+    if (e.pointerId === info.dragOwner) { G.ship.x = info.shipX; G.ship.y = info.shipY; } // a tap is not a move
     fireP(p.x, p.y);
   }
 }
@@ -1156,7 +1169,16 @@ function render() {
     g.strokeStyle = G.pCharge >= 1 ? 'rgba(255,138,92,.9)' : 'rgba(255,138,92,.35)'; g.lineWidth = 1;
     g.beginPath(); g.arc(s.x, s.y - 26, 16, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * G.pCharge); g.stroke();
   }
-  if (G.cross) {
+  if (G.cross && G.cross.queued) {
+    // reserved shot: dashed ring that fills as the charge completes
+    const c = G.cross;
+    g.setLineDash([4, 4]); g.strokeStyle = 'rgba(255,170,120,.55)'; g.lineWidth = 1.2;
+    g.beginPath(); g.arc(c.x, c.y, 26, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+    g.strokeStyle = 'rgba(255,170,120,.95)'; g.lineWidth = 2;
+    g.beginPath(); g.arc(c.x, c.y, 26, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * G.pCharge); g.stroke();
+    g.font = `700 8px ${FONT_NUM}`; g.fillStyle = '#ffd2b0'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('예약', c.x, c.y);
+  } else if (G.cross) {
     const k = G.cross.t / 0.9;
     g.strokeStyle = `rgba(255,170,120,${1 - k})`; g.lineWidth = 1.2;
     g.beginPath(); g.arc(G.cross.x, G.cross.y, 26, 0, Math.PI * 2);

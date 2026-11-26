@@ -221,7 +221,47 @@ const STAGES = [
     cellEvery: 2.3, shootChance: 0, cellHp: 3, cellSpeed: [32, 50],
   },
   {
-    key: 'prostate', body: { cx: 200, cy: 290, rx: 187, ry: 122 }, fx: 'Fx 2', short: '전립선암', title: '전립선암',
+    key: 'breast', body: { cx: 200, cy: 295, rx: 180, ry: 140 }, fx: 'Fx 2', short: '유방암', title: '좌측 유방암 · Tumor bed',
+    intro: '왼쪽 유방암입니다. 심장이 바로 뒤에 있어요. 숨 크게 들이마시고… 참으세요.',
+    tip: '"숨 참으세요"(DIBH)가 뜨면 심장이 뒤로 물러납니다. 그때는 정면으로 쏴도 됩니다. 평소에는 바깥 가장자리에서 노리세요. 심장 앞의 LAD는 작아도 한계가 낮습니다.',
+    hint: ['DIBH 동안 심장이 비켜납니다', '평소엔 바깥 가장자리에서 쏘세요'],
+    shipX: 280,
+    ct(g) {
+      ell(g, 200, 295, 180, 140, 62); ell(g, 200, 300, 168, 126, 92);
+      for (const s of [-1, 1]) {
+        ell(g, 200 + s * 82, 192, 74, 30, 66); ell(g, 200 + s * 82, 195, 50, 20, 106);
+        dots(g, 200 + s * 82, 195, 46, 17, 26, 120, 1.6);
+        ell(g, 200 + s * 92, 222, 62, 9, 112, s * 0.12);
+      }
+      ell(g, 125, 305, 60, 82, 22); ell(g, 282, 314, 56, 78, 22);
+      dots(g, 125, 305, 57, 79, 60, 58, 2.2); dots(g, 282, 314, 53, 75, 60, 58, 2.2);
+      ell(g, 182, 238, 12, 12, 122); ell(g, 228, 360, 12, 12, 120);
+      ell(g, 200, 398, 25, 22, 212); ell(g, 200, 388, 9.5, 9.5, 88);
+      g.fillStyle = 'rgb(205,205,205)'; g.fillRect(196, 414, 8, 16);
+      ell(g, 200, 200, 17, 8, 205); ell(g, 200, 200, 10, 4, 150);
+      for (let i = 0; i < 9; i++) {
+        const a = Math.PI * (0.18 + i * 0.08);
+        for (const s of [-1, 1]) ell(g, 200 + s * Math.cos(a) * 166, 300 + Math.sin(a + Math.PI) * -112, 7, 4, 200, s * a);
+      }
+      couch(g, 445);
+    },
+    // the heart is drawn live (it moves with DIBH), on top of the static CT
+    live(g) {
+      const h = G.oars.find(o => o.name === '심장');
+      ell(g, h.cx, h.cy, h.rx, h.ry, 112); ell(g, h.cx - 8, h.cy + 8, 22, 18, 120);
+    },
+    oars: [
+      { name: '심장', cx: 232, cy: 280, rx: 46, ry: 40, limit: 14, factor: 0.8, color: '#ff7ac8', dibh: [-18, 20] },
+      { name: 'LAD', cx: 256, cy: 247, rx: 7, ry: 5, limit: 16, factor: 1.2, color: '#ff4d8a', dibh: [-18, 20] },
+      { name: '좌폐', cx: 282, cy: 314, rx: 56, ry: 78, limit: 30, factor: 0.35, color: '#5ab4ff' },
+      { name: '우 유방', cx: 118, cy: 192, rx: 70, ry: 30, limit: 10, factor: 0.4, color: '#ffb0d0' },
+    ],
+    tumors: [{ kind: 'main', label: 'Tumor bed', x: 270, y: 198, r: 19, rx: 55, motion: 'dibh' }],
+    hidden: [{ x: 346, y: 252, r: 6 }, { x: 330, y: 228, r: 6 }],
+    cellEvery: 2.2, shootChance: 0.1, cellHp: 3, cellSpeed: [32, 52],
+  },
+  {
+    key: 'prostate', body: { cx: 200, cy: 290, rx: 187, ry: 122 }, fx: 'Fx 3', short: '전립선암', title: '전립선암',
     intro: '직장이 빔 바로 앞에 있습니다. 환자분 관장은 하고 오셨답니다… 아마도.',
     tip: '정가운데로 쏘면 직장이 다 맞습니다. 가장자리를 노리거나, 양성자로 톡 찍거나, 장기 앞에서 MLC가 닫히는 IMRT를 써 보세요.',
     hint: ['정가운데 = 직장 직격', '양성자: 자동 조준 · 톡 하면 그 자리'],
@@ -249,7 +289,7 @@ const STAGES = [
     cellEvery: 2.0, shootChance: 0.18, cellHp: 3.5, cellSpeed: [34, 54],
   },
   {
-    key: 'brain', body: { cx: 200, cy: 300, rx: 138, ry: 160 }, fx: 'Fx 3', short: '교모세포종', title: '교모세포종 · 보스',
+    key: 'brain', body: { cx: 200, cy: 300, rx: 138, ry: 160 }, fx: 'Fx 4', short: '교모세포종', title: '교모세포종 · 보스',
     intro: '돌아다니고, 안 맞으면 다시 자랍니다. 수정체 한계는 10 Gy. 환자분, 눈 감으세요.',
     tip: '보스는 단계가 오를수록 탄을 뿌립니다. 마지막 단계는 저산소 코어라 선량이 덜 먹힙니다.',
     hint: ['안 맞히면 재증식합니다', '보스가 가장자리로 가면 수정체 주의'],
@@ -364,10 +404,10 @@ function drawRoomDecor() {
   ctx.font = `500 8px ${FONT_NUM}`; ctx.fillStyle = 'rgba(170,215,225,.62)';
   ctx.textAlign = 'left';
   ctx.fillText('AXIAL · W 400 / L 40', 8, HUD_H + 12);
-  ctx.fillText(`Z ${st.key === 'brain' ? '+8.5' : st.key === 'lung' ? '+2.5' : '−4.0'} cm`, 8, HUD_H + 23);
+  ctx.fillText(`Z ${st.key === 'brain' ? '+8.5' : st.key === 'lung' ? '+2.5' : st.key === 'breast' ? '+5.0' : '−4.0'} cm`, 8, HUD_H + 23);
   ctx.textAlign = 'right';
   ctx.fillText(`PLAN DC_${st.key.toUpperCase()}_v1`, W - 8, HUD_H + 12);
-  ctx.fillText(`Rx ${iso.rx} Gy · ${st.fx}/3`, W - 8, HUD_H + 23);
+  ctx.fillText(`Rx ${iso.rx} Gy · ${st.fx}/${STAGES.length}`, W - 8, HUD_H + 23);
   // isodose legend
   const lx = W - 12, ly = HUD_H + 34, lh = 70;
   const lg = ctx.createLinearGradient(0, ly, 0, ly + lh);
@@ -406,13 +446,14 @@ function startStage(i) {
   stageStartScore = totalScore;
   G = {
     i, st, time: 0, score: totalScore,
-    ship: { x: 130, y: 590, hp: 100, inv: 0 },
+    ship: { x: st.shipX || 130, y: 590, hp: 100, inv: 0 },
     weapon: 'x', fireT: 1.0, pCharge: 1, recalPending: false,
     drift: 0, driftDir: Math.random() < 0.5 ? -1 : 1, driftWarned: false, forcedT: 0,
     interlock: 0, interlockMsg: '', nextInterlock: charKey === 'physicist' ? rand(55, 75) : rand(26, 40),
     sp: { cd: 4, active: 0 },
     arc: 0.4, arcT: 0, arcFireT: 0, arcSave: null, im: null, imView: null, bevL: null, bevR: null,
-    oars: st.oars.map(o => ({ ...o, dose: 0, flash: 0 })),
+    oars: st.oars.map(o => ({ ...o, bx: o.cx, by: o.cy, dose: 0, flash: 0 })),
+    dibh: { on: false, t: 6, k: 0 },
     tumors: [...st.tumors.map(t => mkTumor(t, false)), ...st.hidden.map(h => mkTumor(h, true))],
     cells: [], bullets: [], eb: [], parts: [], texts: [], booms: [], banners: [],
     clearT: -1, shake: 0, hintT: 5.5, cross: null,
@@ -573,6 +614,29 @@ function segOpen(geo, seg) {
     return seg === 1 ? j < geo.bl : j > geo.br;
   });
 }
+/* DIBH: free breathing 7 s, breath hold 5 s. During the hold the heart (and LAD) drops back out of the beam path. */
+function updateDibh(dt) {
+  const d = G.dibh;
+  d.t -= dt;
+  if (d.t <= 0) {
+    d.on = !d.on; d.t = d.on ? 5 : 7;
+    if (d.on) banner('숨 참으세요 · DIBH', '심장이 뒤로 물러났습니다 — 지금은 정면도 OK', '#7ef3c8', 1.6);
+    else banner('숨 쉬세요', '심장이 다시 빔 길로 — 가장자리에서 쏘세요', '#ff7ac8', 1.6);
+  }
+  d.k += ((d.on ? 1 : 0) - d.k) * Math.min(1, dt * 3);
+  for (const o of G.oars) if (o.dibh) { o.cx = o.bx + o.dibh[0] * d.k; o.cy = o.by + o.dibh[1] * d.k; }
+}
+function drawDibh() {
+  const d = G.dibh, x = 8, y = HUD_H + 46, w = 132, h = 17;
+  ctx.fillStyle = 'rgba(5,9,13,.82)'; rr(ctx, x, y, w, h, 8); ctx.fill();
+  const col = d.on ? '#7ef3c8' : '#ff9ac8';
+  ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.stroke();
+  const f = d.on ? d.t / 5 : 1 - d.t / 7;
+  ctx.fillStyle = d.on ? 'rgba(126,243,200,.22)' : 'rgba(255,154,200,.16)'; rr(ctx, x + 1, y + 1, Math.max(2, (w - 2) * f), h - 2, 7); ctx.fill();
+  ctx.font = `700 9px ${FONT_UI}`; ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(d.on ? `DIBH · 숨 참는 중 ${d.t.toFixed(1)}s` : `자유 호흡 · DIBH까지 ${Math.ceil(d.t)}s`, x + 8, y + h / 2 + 0.5);
+}
+
 function updateImrt(dt) {
   const im = G.im, s = G.ship;
   s.inv = Math.max(s.inv, 0.05);
@@ -781,6 +845,7 @@ function update(dt) {
     G.gasOff.x += (G.gasTo.x - G.gasOff.x) * Math.min(1, dt * 5);
     G.gasOff.y += (G.gasTo.y - G.gasOff.y) * Math.min(1, dt * 5);
   }
+  if (G.st.key === 'breast') updateDibh(dt);
   for (const t of G.tumors) {
     if (!t.alive) continue;
     t.flash = Math.max(0, t.flash - dt);
@@ -788,6 +853,7 @@ function update(dt) {
     let dx = 0, dy = 0;
     if (t.motion === 'breath') { const w = Math.PI * 2 / 4; dx = 11 * Math.sin(w * t.mt); dy = 8 * Math.sin(w * t.mt + 0.6); }
     else if (t.motion === 'gas') { dx = G.gasOff.x; dy = G.gasOff.y; }
+    else if (t.motion === 'dibh') { const w = Math.PI * 2 / 4, k = G.dibh.k; dx = 3 * Math.sin(w * t.mt) * (1 - k); dy = 4 * Math.sin(w * t.mt + 0.6) * (1 - k) - 5 * k; }
     else if (t.motion === 'wander') { dx = 56 * Math.sin(0.55 * t.mt); dy = 24 * Math.sin(0.9 * t.mt + 1); }
     t.x = t.bx + dx; t.y = t.by + dy;
     if (charKey === 'doctor' && G.sp.active > 0) t.seen = true;
@@ -1168,7 +1234,7 @@ function drawHUD() {
   const c = CHARS[charKey];
   // row 1
   g.textBaseline = 'middle'; g.textAlign = 'left';
-  g.font = `700 10px ${FONT_NUM}`; g.fillStyle = '#2fd3c5'; g.fillText(G.st.fx + ' / 3', 10, 17);
+  g.font = `700 10px ${FONT_NUM}`; g.fillStyle = '#2fd3c5'; g.fillText(G.st.fx + ' / ' + STAGES.length, 10, 17);
   g.font = `700 14px ${FONT_UI}`; g.fillStyle = '#dbe5ea'; g.fillText(G.st.short, 58, 17);
   const nameW = g.measureText(G.st.short).width;
   g.font = `600 9px ${FONT_UI}`;
@@ -1310,9 +1376,11 @@ function render() {
   g.save();
   if (G.shake > 0) g.translate(rand(-3, 3) * G.shake * 4, rand(-3, 3) * G.shake * 4);
   g.drawImage(ctImg, 0, 0, W, H);
+  if (G.st.live) G.st.live(g);
   drawMotes(performance.now() / 1000);
   drawDoseWash();
   drawRoomDecor();
+  if (G.st.key === 'breast') drawDibh();
   drawOARs();
   drawTumors();
   drawCells();
@@ -1456,12 +1524,12 @@ function showTitle() {
   show(`
     <div class="brand"><img src="${LOGO}" alt="DosiCare — Expertise &amp; Support"></div>
     <h1 class="logo">암 퇴치 작전</h1>
-    <div class="tag">Linac Flight Unit · v1.4/div>
+    <div class="tag">Linac Flight Unit · v1.5</div>
     <p class="lead">리니악 비행선을 몰고 환자 몸속으로.<br>암에는 처방선량을, 정상 장기에는 최소 선량을.</p>
     <div class="panel">
       <div class="kv"><span>암 체력</span><b>처방선량 (Gy)</b></div>
       <div class="kv"><span>지는 조건</span><b>장기 선량 초과 · 장비 다운</b></div>
-      <div class="kv"><span>치료 횟수</span><b>3 Fx</b></div>
+      <div class="kv"><span>치료 횟수</span><b>${STAGES.length} Fx</b></div>
     </div>
     <button class="btn" id="go">시작</button>
     <p class="dim" style="text-align:center;font-size:.72em">숫자는 게임용으로 단순화한 값입니다. 실제 임상 기준이 아닙니다.</p>`);
@@ -1493,7 +1561,7 @@ function showIntro(i) {
   const st = STAGES[i];
   const chips = st.oars.map(o => `<span class="chip" style="--c:${o.color}">${o.name} ≤ ${o.limit} Gy</span>`).join('');
   const tum = st.tumors[0];
-  show(`<div class="fx">${st.fx} / 3</div><h2>${st.title}</h2>
+  show(`<div class="fx">${st.fx} / ${STAGES.length}</div><h2>${st.title}</h2>
     <p>${st.intro}</p>
     <div class="panel">
       <div class="kv"><span>${tum.label} 처방</span><b>${tum.rx} Gy</b></div>
@@ -1550,6 +1618,8 @@ function showOver() {
     joke = o.name === '척수' ? '척수는 한 번 넘으면 끝입니다. 사고 보고서 쓰러 가세요.'
       : o.name.includes('수정체') ? '환자분이 내년에 백내장 수술을 받으시게 됐습니다.'
       : o.name === '직장' ? '소화기내과에서 전화가 왔습니다. 받으시겠어요?'
+      : o.name === '심장' ? '순환기내과 협진이 잡혔습니다. 다음엔 DIBH 때 쏘세요.'
+      : o.name === 'LAD' ? 'LAD는 작아도 무섭습니다. 10년 뒤 심장내과 외래 예약 완료.'
       : '선량 제약을 다시 확인하고 플랜을 새로 짜세요.';
   } else {
     title = '장비 다운';
@@ -1566,7 +1636,7 @@ function showOver() {
 function showVictory() {
   state = 'victory';
   const c = CHARS[charKey];
-  show(`<div class="tag">Course complete · 3 / 3 Fx</div><h2 style="text-align:center">전 과정 치료 완료</h2>
+  show(`<div class="tag">Course complete · ${STAGES.length} / ${STAGES.length} Fx</div><h2 style="text-align:center">전 과정 치료 완료</h2>
     <div style="width:6em;margin:0 auto">${avatarSVG(charKey)}</div>
     <p class="lead">환자분 퇴원하십니다.<br><span class="dim">다음 외래: 3개월 뒤 추적 CT</span></p>
     <div class="big">${totalScore.toLocaleString('en-US')}</div>

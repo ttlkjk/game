@@ -25,7 +25,7 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);overflow:hid
 #game{--s:1;position:relative;width:400px;height:800px;font-size:calc(16px*var(--s));background:var(--bg);overflow:hidden}
 #cv{position:absolute;left:0;top:0;display:block;touch-action:none}
 #bar{position:absolute;left:0;right:0;bottom:0;height:calc(100% * 140 / 800);box-sizing:border-box;
-  display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:1.15fr .85fr;gap:.35em;padding:.45em .5em .55em;
+  display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:1.15fr .85fr;gap:.35em;padding:.45em .5em .55em;
   background:var(--panel);border-top:1px solid var(--line)}
 .wbtn,.sbtn{position:relative;border:1px solid var(--line);background:var(--panel2);color:var(--fg);
   border-radius:.6em;font:inherit;padding:.3em .2em;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -37,7 +37,7 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);overflow:hid
 .wbtn .g i{display:block;height:100%;width:100%;background:var(--accent)}
 .wbtn.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent),0 0 .8em rgba(47,211,197,.25)}
 .wbtn.on .nm{color:var(--accent)}
-.sbtn{--cd:0;--ca:var(--accent);border-color:var(--ca);grid-column:span 3}
+.sbtn{--cd:0;--ca:var(--accent);border-color:var(--ca);grid-column:span 2}
 .abtn{--ca:#7ef3c8;grid-column:span 2}
 .sbtn::after{content:"";position:absolute;inset:0;background:conic-gradient(rgba(4,6,8,.72) calc(var(--cd)*360deg),transparent 0);pointer-events:none}
 .sbtn .nm{font-weight:700;font-size:.9em;color:var(--ca)}
@@ -105,7 +105,6 @@ p{margin:0;line-height:1.55;font-size:.92em}
       <button class="wbtn" data-w="e" type="button"><svg class="ico" viewBox="0 0 34 22"><g fill="#a99bff"><circle cx="17" cy="4" r="2.2"/><circle cx="9" cy="7" r="2.2"/><circle cx="25" cy="7" r="2.2"/><circle cx="4" cy="12" r="2"/><circle cx="30" cy="12" r="2"/></g><path d="M17 21 17 8M17 21 9 9M17 21 25 9" stroke="#a99bff" stroke-width=".8" opacity=".5"/></svg><span class="nm">전자선</span><span class="sub">9 MeV</span></button>
       <button class="wbtn" data-w="p" type="button"><svg class="ico" viewBox="0 0 34 22"><path d="M17 21V9" stroke="#ff9f6b" stroke-width="1.6" opacity=".55"/><circle cx="17" cy="6" r="4.6" fill="#ff7a59"/><circle cx="17" cy="6" r="2" fill="#fff1d6"/></svg><span class="nm">양성자</span><span class="sub">자동·톡</span><span class="g"><i></i></span></button>
       <button class="wbtn" data-w="i" type="button"><svg class="ico" viewBox="0 0 34 22"><g fill="#7ef3c8"><rect x="3" y="3" width="4" height="16" opacity=".3"/><rect x="9" y="3" width="4" height="16"/><rect x="15" y="3" width="4" height="16"/><rect x="21" y="3" width="4" height="16" opacity=".3"/><rect x="27" y="3" width="4" height="16" opacity=".65"/></g></svg><span class="nm">IMRT</span><span class="sub">MLC 7</span></button>
-      <button class="wbtn" data-w="w" type="button"><svg class="ico" viewBox="0 0 34 22"><rect x="9" y="12" width="16" height="9" rx="1.5" fill="none" stroke="#4aa3ff" stroke-width="1.4"/><path d="M10 16h14v4H10z" fill="#4aa3ff" opacity=".55"/><g fill="#7cc4ff"><circle cx="17" cy="7" r="1.6"/><circle cx="12" cy="4" r="1.3"/><circle cx="22" cy="4" r="1.3"/><circle cx="17" cy="1.8" r="1.1"/></g></svg><span class="nm">물대포</span><span class="sub">Phantom</span><span class="g"><i></i></span></button>
       <button class="sbtn" id="sbtn" type="button"><span class="nm" id="sname">특기</span><span class="st" id="sstat">준비</span></button>
       <button class="sbtn abtn" id="abtn" type="button"><span class="nm">RapidArc</span><span class="st" id="astat">0%</span></button>
     </div>
@@ -408,11 +407,11 @@ function startStage(i) {
   G = {
     i, st, time: 0, score: totalScore,
     ship: { x: 130, y: 590, hp: 100, inv: 0 },
-    weapon: 'x', fireT: 1.0, pCharge: 1, tank: 100, waterOn: false,
+    weapon: 'x', fireT: 1.0, pCharge: 1, recalPending: false,
     drift: 0, driftDir: Math.random() < 0.5 ? -1 : 1, driftWarned: false, forcedT: 0,
     interlock: 0, interlockMsg: '', nextInterlock: charKey === 'physicist' ? rand(55, 75) : rand(26, 40),
     sp: { cd: 4, active: 0 },
-    arc: 0.4, arcT: 0, arcFireT: 0, arcSave: null, mlc: null,
+    arc: 0.4, arcT: 0, arcFireT: 0, arcSave: null, im: null, imView: null, bevL: null, bevR: null,
     oars: st.oars.map(o => ({ ...o, dose: 0, flash: 0 })),
     tumors: [...st.tumors.map(t => mkTumor(t, false)), ...st.hidden.map(h => mkTumor(h, true))],
     cells: [], bullets: [], eb: [], parts: [], texts: [], booms: [], banners: [],
@@ -475,9 +474,9 @@ function hitCell(c, d) {
     burst(c.x, c.y, '#ff7a8a', 8, 90);
   }
 }
-function hurt(n, why) {
+function hurt(n, why, force) {
   const s = G.ship;
-  if (s.inv > 0 || state !== 'play' || G.clearT >= 0) return;
+  if ((s.inv > 0 && !force) || state !== 'play' || G.clearT >= 0) return;
   s.hp -= n; s.inv = 0.8; G.shake = 0.25;
   ftext(s.x, s.y - 30, `-${n} ${why || ''}`.trim(), '#ff6b78', 12);
   burst(s.x, s.y, '#ffb0a0', 10, 120);
@@ -498,11 +497,6 @@ function fireE() {
     const a = (deg - 90) * Math.PI / 180;
     G.bullets.push({ type: 'e', x: s.x + jitter(), y: s.y - 24, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, hits: new Set(), mask: 0, travel: 0, range: 245 });
   }
-}
-function fireW() {
-  const s = G.ship;
-  const a = (rand(-18, 18) - 90) * Math.PI / 180, v = rand(380, 460);
-  G.bullets.push({ type: 'w', x: s.x + rand(-3, 3), y: s.y - 24, vx: Math.cos(a) * v, vy: Math.sin(a) * v, hits: new Set(), mask: 0, travel: 0, range: rand(180, 220) });
 }
 function fireP(tx, ty) {
   const s = G.ship;
@@ -531,25 +525,79 @@ function protonExplode(x, y) {
     if (dx * dx + dy * dy <= 1) depositOAR(o, 3.5);
   }
 }
-const OAR_BASE = { x: 0.3, e: 0.25, p: 0.075, w: 0, i: 0.18, a: 0.12 };
+const OAR_BASE = { x: 0.3, e: 0.25, p: 0.075, w: 0, i: 0.033, a: 0.12 };
 
-/* IMRT: 7 beamlets; each MLC leaf pair opens by what lies in its column */
-function fireI() {
-  const s = G.ship, cols = [];
-  const targets = G.tumors.filter(t => t.alive && (t.kind !== 'hidden' || t.seen));
-  for (let k = -3; k <= 3; k++) {
-    const x = s.x + k * 9 + jitter() * 0.5;
-    const hasT = targets.some(t => Math.abs(x - t.x) < t.r);
-    const inPath = G.oars.filter(o => Math.abs(x - o.cx) < o.rx && o.cy < s.y);
-    // serial organs (factor >= 1: cord, rectum, brainstem...) get the leaves nearly shut; parallel organs only trimmed
-    let inten;
-    if (hasT) inten = inPath.reduce((m, o) => Math.min(m, o.factor >= 1 ? 0.25 : 0.75), 1);
-    else inten = inPath.length ? 0 : 0.4;
-    cols.push(inten);
-    if (inten > 0) G.bullets.push({ type: 'i', x, y: s.y - 30, vx: 0, vy: -700, hits: new Set(), mask: 0, inten, dmg: 0.3 * inten });
+/* IMRT step & shoot: 7 fixed gantry angles. At each stop the MLC delivers 3 segments:
+   the full target, then the part left of any serial organ, then the part right of it.
+   So beamlets through a serial organ get 1/3 of the fluence of the rest. */
+const IMRT_FIELDS = 7, IMRT_MOVE = 0.4, IMRT_SEG = 0.3, IMRT_COLS = 11, IMRT_DU = 6;
+const imrtAngle = k => Math.PI / 2 + k * Math.PI * 2 / IMRT_FIELDS;
+const gantryDeg = th => Math.round((((th - Math.PI / 2) * 180 / Math.PI) + 180) % 360);
+const ease = f => f * f * (3 - 2 * f);
+function startImrt() {
+  G.im = { k: 0, phase: 'move', t: 0, first: true, from: { x: G.ship.x, y: G.ship.y }, save: { x: G.ship.x, y: G.ship.y }, seg: 0, volleyT: 0 };
+  G.imView = null;
+  banner('IMRT · step & shoot', '7문 · 문마다 MLC 세그먼트 3개', '#7ef3c8', 2);
+}
+function stopImrt() {
+  if (!G.im) return;
+  if (!(G.arcT > 0)) { G.ship.x = G.im.save.x; G.ship.y = G.im.save.y; }
+  G.im = null; G.imView = null;
+}
+function imrtGeometry() {
+  // beam axis from the ship to the target; columns are beamlets across the axis
+  const s = G.ship, t = arcTarget();
+  const d = dist(s.x, s.y, t.x, t.y) || 1, dx = (t.x - s.x) / d, dy = (t.y - s.y) / d, px = -dy, py = dx;
+  const main = G.tumors.find(u => u.alive && u.kind !== 'hidden');
+  const cols = [];
+  let blockName = '';
+  for (let j = 0; j < IMRT_COLS; j++) {
+    const u = (j - (IMRT_COLS - 1) / 2) * IMRT_DU;
+    const ox = s.x + px * u, oy = s.y + py * u;
+    const hasT = !!main && Math.abs((main.x - ox) * px + (main.y - oy) * py) < main.r;
+    let serial = false;
+    for (let k = 6; k < 760 && !serial; k += 6) {
+      const x = ox + dx * k, y = oy + dy * k;
+      if (x < 0 || x > W || y < HUD_H || y > H) break;
+      for (const o of G.oars) if (o.factor >= 1 && inE(x, y, o)) { serial = true; blockName = o.name; break; }
+    }
+    cols.push({ u, ox, oy, hasT, blocked: hasT && serial });
   }
-  G.mlc = cols;
-  for (const o of G.oars) depositOAR(o, 0.01, true); // low-dose scatter bath: the price of more MU
+  const bl = cols.findIndex(c => c.blocked), br = cols.length - 1 - [...cols].reverse().findIndex(c => c.blocked);
+  return { dx, dy, px, py, cols, bl, br, blockName, r: main ? main.r : 20 };
+}
+function segOpen(geo, seg) {
+  return geo.cols.map((c, j) => {
+    if (!c.hasT) return false;
+    if (geo.bl < 0 || seg === 0) return true;
+    return seg === 1 ? j < geo.bl : j > geo.br;
+  });
+}
+function updateImrt(dt) {
+  const im = G.im, s = G.ship;
+  s.inv = Math.max(s.inv, 0.05);
+  im.t += dt;
+  if (im.phase === 'move') {
+    const f = ease(Math.min(1, im.t / IMRT_MOVE));
+    if (im.first) { const p = arcPath(imrtAngle(0)); s.x = im.from.x + (p.x - im.from.x) * f; s.y = im.from.y + (p.y - im.from.y) * f; }
+    else { const p = arcPath(imrtAngle(im.k - 1) + (imrtAngle(im.k) - imrtAngle(im.k - 1)) * f); s.x = p.x; s.y = p.y; }
+    if (im.t >= IMRT_MOVE) { im.phase = 'shoot'; im.t = 0; im.seg = -1; im.volleyT = 0; im.first = false; }
+    G.imView = G.imView && { ...G.imView, moving: true };
+    return;
+  }
+  const seg = Math.floor(im.t / IMRT_SEG);
+  if (seg >= 3) { im.k = (im.k + 1) % IMRT_FIELDS; im.phase = 'move'; im.t = 0; return; }
+  const geo = imrtGeometry();
+  const open = segOpen(geo, seg);
+  G.imView = { geo, open, seg, k: im.k, th: imrtAngle(im.k), moving: false };
+  im.volleyT -= dt;
+  if (im.volleyT <= 0) {
+    im.volleyT = 0.1;
+    geo.cols.forEach((c, j) => {
+      if (open[j]) G.bullets.push({ type: 'i', x: c.ox, y: c.oy, vx: geo.dx * 800, vy: geo.dy * 800, hits: new Set(), mask: 0, inten: 1, dmg: 0.065, cellDmg: 0.25 });
+    });
+    for (const o of G.oars) depositOAR(o, 0.0015, true); // low-dose scatter: the price of more MU
+  }
 }
 
 /* RapidArc: the ship orbits the patient and aims every beam at the target */
@@ -593,7 +641,7 @@ function updateBullets(dt) {
     b.x += b.vx * dt; b.y += b.vy * dt;
     const step = Math.hypot(b.vx, b.vy) * dt;
     if (b.travel !== undefined) b.travel += step;
-    if (b.type !== 'w') addDose(b.x, b.y, step * (b.type === 'x' ? 0.0035 : b.type === 'e' ? 0.005 : b.type === 'i' ? 0.0035 * b.inten : b.type === 'a' ? 0.0025 : 0.001));
+    if (b.type !== 'w') addDose(b.x, b.y, step * (b.type === 'x' ? 0.0035 : b.type === 'e' ? 0.005 : b.type === 'i' ? 0.0005 : b.type === 'a' ? 0.0025 : 0.001));
     if (b.type === 'p') {
       b.left -= step;
       if (b.left <= 0) { b.x = b.tx; b.y = b.ty; b.dead = true; protonExplode(b.tx, b.ty); continue; }
@@ -617,7 +665,7 @@ function updateBullets(dt) {
       for (const c of G.cells) {
         if (!c.dead && !b.hits.has(c.id) && dist(b.x, b.y, c.x, c.y) < c.r + 2) {
           b.hits.add(c.id);
-          if (b.type === 'x' || b.type === 'i' || b.type === 'a') hitCell(c, b.dmg != null ? b.dmg : 0.6);
+          if (b.type === 'x' || b.type === 'i' || b.type === 'a') hitCell(c, b.cellDmg != null ? b.cellDmg : b.dmg != null ? b.dmg : 0.6);
           else if (b.type === 'e') { hitCell(c, 1.0); b.dead = true; break; }
           else if (b.type === 'w') { c.vy -= 150; c.slow = 1.2; hitCell(c, 0.15); b.dead = true; burst(b.x, b.y, '#7cc4ff', 3, 60); break; }
         }
@@ -668,7 +716,7 @@ function update(dt) {
   let kx = 0, ky = 0;
   if (keys.ArrowLeft || keys.KeyA) kx -= 1; if (keys.ArrowRight || keys.KeyD) kx += 1;
   if (keys.ArrowUp || keys.KeyW) ky -= 1; if (keys.ArrowDown || keys.KeyS) ky += 1;
-  if (!arcing) { s.x = clamp(s.x + kx * spd, SHIP_MIN_X, SHIP_MAX_X); s.y = clamp(s.y + ky * spd, SHIP_MIN_Y, SHIP_MAX_Y); }
+  if (!arcing && !G.im) { s.x = clamp(s.x + kx * spd, SHIP_MIN_X, SHIP_MAX_X); s.y = clamp(s.y + ky * spd, SHIP_MIN_Y, SHIP_MAX_Y); }
   s.inv = Math.max(0, s.inv - dt);
 
   // special
@@ -682,12 +730,12 @@ function update(dt) {
   const ad = Math.abs(G.drift);
   if (ad >= 3 && !G.driftWarned) {
     G.driftWarned = true;
-    banner(`Output ${G.drift > 0 ? '+' : ''}${G.drift.toFixed(1)}%`, '아침 QA 하셨죠? 물대포로 보정하세요', '#ffb347', 2.6);
+    banner(`Output ${G.drift > 0 ? '+' : ''}${G.drift.toFixed(1)}%`, '아침 QA 하셨죠? 6%를 넘으면 인터락 후 재보정합니다', '#ffb347', 2.6);
   }
   if (ad < 2) G.driftWarned = false;
   G.forcedT -= dt;
   if (ad >= 6 && G.forcedT <= 0 && G.interlock <= 0 && !arcing) {
-    G.interlock = 1.6; G.interlockMsg = 'DOSE 1 — Output 허용범위 초과'; G.forcedT = 4.5;
+    G.interlock = 2.2; G.interlockMsg = 'DOSE 1 — Output 허용범위 초과'; G.forcedT = 4.5; G.recalPending = true;
   }
 
   // random interlock
@@ -698,34 +746,27 @@ function update(dt) {
     G.nextInterlock = charKey === 'physicist' ? rand(55, 75) : rand(26, 40);
   }
   G.interlock = Math.max(0, G.interlock - dt);
+  if (G.recalPending && G.interlock <= 0) {
+    // physics recalibrates the output after the dose interlock
+    G.recalPending = false; G.drift = 0; G.driftDir = Math.random() < 0.5 ? -1 : 1;
+    banner('출력 재보정 완료', '물리팀이 Output을 0.0%로 맞췄습니다', '#2fd3c5', 2);
+  }
 
   // firing
   G.pCharge = Math.min(1, G.pCharge + dt / 1.6);
   if (G.pQueue && G.weapon !== 'p') G.pQueue = null;
   if (G.pQueue && G.pCharge >= 1 && G.interlock <= 0) fireP(G.pQueue.x, G.pQueue.y);
-  G.waterOn = false;
+  if (G.weapon === 'i' && G.im && !arcing && G.interlock <= 0) updateImrt(dt);
   if (G.interlock <= 0 && !arcing) {
     G.fireT -= dt;
     if (G.weapon === 'x' && G.fireT <= 0) { G.fireT = 0.15; fireX(); }
-    else if (G.weapon === 'i' && G.fireT <= 0) { G.fireT = 0.3; fireI(); }
     else if (G.weapon === 'e' && G.fireT <= 0) { G.fireT = 0.34; fireE(); }
     else if (G.weapon === 'p' && G.pCharge >= 1 && !G.pQueue) {
       // auto-aim at the tumor's current position (it may move during flight: interplay); a tap overrides the aim
       const t = G.tumors.find(u => u.alive && u.kind !== 'hidden');
       if (t && t.y < G.ship.y - 30) fireP(t.x, t.y);
     }
-    else if (G.weapon === 'w' && G.tank > 0) {
-      G.waterOn = true;
-      if (G.fireT <= 0) { G.fireT = 0.07; fireW(); }
-    }
   }
-  if (G.waterOn) {
-    G.tank = Math.max(0, G.tank - 22 * dt);
-    const fix = 2 * dt;
-    G.drift = Math.abs(G.drift) <= fix ? 0 : G.drift - Math.sign(G.drift) * fix;
-    s.hp = Math.min(100, s.hp + 6 * dt);
-    if (G.tank <= 0) ftext(s.x, s.y - 34, '물 채우는 중…', '#7cc4ff', 10);
-  } else G.tank = Math.min(100, G.tank + 12 * dt);
 
   updateBullets(dt);
 
@@ -802,7 +843,7 @@ function update(dt) {
       }
     }
     if (dist(c.x, c.y, s.x, s.y) < c.r + 13) { c.dead = true; burst(c.x, c.y, '#ff7a8a', 8, 90); hurt(15, '충돌'); }
-    else if (c.y > H + 6) { c.dead = true; G.stats.escaped++; ftext(c.x, H - 18, '전이!', '#ff4d5e', 12); hurt(8, '전이'); }
+    else if (c.y > H + 6) { c.dead = true; G.stats.escaped++; ftext(c.x, H - 18, '전이!', '#ff4d5e', 12); hurt(G.im ? 3 : 8, '전이', true); }
   }
   G.cells = G.cells.filter(c => !c.dead);
 
@@ -866,7 +907,7 @@ cv.addEventListener('pointermove', e => {
   if (!info || state !== 'play') return;
   const p = toLogical(e);
   info.moved = Math.max(info.moved, dist(p.x, p.y, info.sx, info.sy));
-  if (e.pointerId === dragId && !(G.arcT > 0)) {
+  if (e.pointerId === dragId && !(G.arcT > 0) && !G.im) {
     const k = charKey === 'therapist' ? 1.45 : 1.3;
     G.ship.x = clamp(info.shipX + (p.x - info.sx) * k, SHIP_MIN_X, SHIP_MAX_X);
     G.ship.y = clamp(info.shipY + (p.y - info.sy) * k, SHIP_MIN_Y, SHIP_MAX_Y);
@@ -894,7 +935,6 @@ window.addEventListener('keydown', e => {
     if (e.code === 'Digit2') selectWeapon('e');
     if (e.code === 'Digit3') selectWeapon('p');
     if (e.code === 'Digit4') selectWeapon('i');
-    if (e.code === 'Digit5') selectWeapon('w');
     if (e.code === 'KeyR') useArc();
     if (e.code === 'Space' || e.code === 'KeyE') { e.preventDefault(); useSpecial(); }
     if (e.code === 'KeyP' || e.code === 'Escape') pauseGame();
@@ -913,6 +953,8 @@ $('#pause').addEventListener('click', () => pauseGame());
 function selectWeapon(w) {
   if (!G) return;
   if (G.weapon !== w) G.fireT = Math.max(G.fireT, 0.05);
+  if (G.weapon === 'i' && w !== 'i') stopImrt();
+  if (w === 'i' && G.weapon !== 'i') { G.weapon = w; startImrt(); }
   G.weapon = w;
   wbtns.forEach(b => b.classList.toggle('on', b.dataset.w === w));
 }
@@ -932,11 +974,9 @@ function setSpecialUI() {
 let lastUI = '';
 function updateBarUI() {
   if (!G) return;
-  const pg = $('.wbtn[data-w="p"] .g i'), wg = $('.wbtn[data-w="w"] .g i');
+  const pg = $('.wbtn[data-w="p"] .g i');
   pg.style.width = (G.pCharge * 100).toFixed(0) + '%';
   pg.style.background = G.pCharge >= 1 ? '#ff8a5c' : '#6b4a3c';
-  wg.style.width = G.tank.toFixed(0) + '%';
-  wg.style.background = G.tank > 15 ? '#4aa3ff' : '#ff4d5e';
   const sb = $('#sbtn'), c = CHARS[charKey];
   let cd = 0, txt = '준비', cls = 'ready';
   if (G.sp.active > 0) { txt = `사용 중 ${G.sp.active.toFixed(1)}s`; cls = 'active'; cd = 0; }
@@ -1168,6 +1208,82 @@ function drawHUD() {
   g.fillText('OAR 선량 제한 (Gy) — 넘으면 플랜 반려', 10, 86);
 }
 
+function drawImrtField() {
+  const b = G.st.body, ax = Math.min(b.rx + 28, 186), ay = b.ry + 42, v = G.imView, s = G.ship;
+  // gantry path and the 7 field stops
+  ctx.setLineDash([3, 5]); ctx.strokeStyle = 'rgba(126,243,200,.3)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(b.cx, b.cy, ax, ay, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+  for (let k = 0; k < IMRT_FIELDS; k++) {
+    const p = arcPath(imrtAngle(k)), cur = G.im.k === k;
+    ctx.beginPath(); ctx.arc(p.x, p.y, cur ? 4.5 : 3, 0, Math.PI * 2);
+    ctx.fillStyle = cur ? '#7ef3c8' : 'rgba(126,243,200,.35)'; ctx.fill();
+  }
+  if (!v || v.moving) return;
+  // treatment field (light field of the open aperture)
+  const idx = v.open.map((o, j) => o ? j : -1).filter(j => j >= 0);
+  if (idx.length) {
+    const c0 = v.geo.cols[idx[0]], c1 = v.geo.cols[idx[idx.length - 1]], L = 700, hw = IMRT_DU / 2;
+    const a0x = c0.ox - v.geo.px * hw, a0y = c0.oy - v.geo.py * hw, a1x = c1.ox + v.geo.px * hw, a1y = c1.oy + v.geo.py * hw;
+    ctx.beginPath(); ctx.moveTo(a0x, a0y); ctx.lineTo(a1x, a1y);
+    ctx.lineTo(a1x + v.geo.dx * L, a1y + v.geo.dy * L); ctx.lineTo(a0x + v.geo.dx * L, a0y + v.geo.dy * L); ctx.closePath();
+    ctx.fillStyle = 'rgba(126,243,200,.07)'; ctx.fill();
+  }
+  ctx.font = `700 9px ${FONT_NUM}`; ctx.fillStyle = '#bfffe6'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(`G ${gantryDeg(v.th)}°`, s.x, s.y + (s.y > b.cy ? 30 : -38));
+}
+
+/* beam's-eye view: leaf pairs close from both banks onto the target; serial organ band shaded */
+function drawBEV() {
+  const v = G.imView;
+  if (!G.im || !v || G.arcT > 0) return;
+  const px = 8, py = 500, pw = 150, ph = 146, ROWS = 14;
+  ctx.fillStyle = 'rgba(5,9,13,.9)'; rr(ctx, px, py, pw, ph, 6); ctx.fill();
+  ctx.strokeStyle = 'rgba(126,243,200,.55)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `700 9px ${FONT_NUM}`; ctx.fillStyle = '#7ef3c8'; ctx.fillText('BEV · MLC', px + 8, py + 11);
+  ctx.textAlign = 'right'; ctx.fillStyle = '#bfffe6'; ctx.fillText(`G ${gantryDeg(v.th)}°`, px + pw - 8, py + 11);
+  ctx.textAlign = 'left'; ctx.font = `500 8px ${FONT_NUM}`; ctx.fillStyle = 'rgba(190,225,232,.75)';
+  ctx.fillText(v.moving ? `Field ${v.k + 1}/7 · 이동 중` : `Field ${v.k + 1}/7 · Seg ${v.seg + 1}/3`, px + 8, py + 23);
+  const x0 = px + 8, y0 = py + 30, w = pw - 16, h = ph - 38, cx = x0 + w / 2, cy = y0 + h / 2;
+  const sc = w / (IMRT_COLS * IMRT_DU + 10), rowH = h / ROWS, r = v.geo.r;
+  ctx.save(); rr(ctx, x0, y0, w, h, 3); ctx.clip();
+  ctx.fillStyle = '#0c151b'; ctx.fillRect(x0, y0, w, h);
+  // serial organ projection
+  if (v.geo.bl >= 0) {
+    const u0 = v.geo.cols[v.geo.bl].u - IMRT_DU / 2, u1 = v.geo.cols[v.geo.br].u + IMRT_DU / 2;
+    ctx.fillStyle = 'rgba(255,214,102,.18)'; ctx.fillRect(cx + u0 * sc, y0, (u1 - u0) * sc, h);
+    ctx.font = `600 8px ${FONT_UI}`; ctx.fillStyle = '#ffd666'; ctx.textAlign = 'center';
+    ctx.fillText(v.geo.blockName, cx + (u0 + u1) / 2 * sc, y0 + h - 6);
+  }
+  // target projection
+  ctx.beginPath(); ctx.arc(cx, cy, r * sc, 0, Math.PI * 2); ctx.strokeStyle = '#ff3b4f'; ctx.lineWidth = 1.4; ctx.stroke();
+  // segment limits along u
+  let segMin = -1e9, segMax = 1e9;
+  if (v.geo.bl >= 0 && v.seg === 1) segMax = v.geo.cols[v.geo.bl].u - IMRT_DU / 2;
+  if (v.geo.bl >= 0 && v.seg === 2) segMin = v.geo.cols[v.geo.br].u + IMRT_DU / 2;
+  if (!G.bevL) { G.bevL = new Array(ROWS).fill(cx); G.bevR = new Array(ROWS).fill(cx); }
+  const k = Math.min(1, 1 / 60 * 14);
+  for (let i = 0; i < ROWS; i++) {
+    const yv = (y0 + (i + 0.5) * rowH - cy) / sc;
+    const c = Math.abs(yv) < r ? Math.sqrt(r * r - yv * yv) : 0;
+    let a = Math.max(-c, segMin), bnd = Math.min(c, segMax);
+    if (v.moving || a >= bnd) { a = 0; bnd = 0; }
+    const tl = cx + a * sc, tr = cx + bnd * sc;
+    G.bevL[i] += (tl - G.bevL[i]) * k; G.bevR[i] += (tr - G.bevR[i]) * k;
+    const yy = y0 + i * rowH + 0.5, lh = rowH - 1;
+    if (G.bevR[i] - G.bevL[i] > 0.5) { ctx.fillStyle = 'rgba(126,243,200,.28)'; ctx.fillRect(G.bevL[i], yy, G.bevR[i] - G.bevL[i], lh); }
+    const lg = ctx.createLinearGradient(0, yy, 0, yy + lh);
+    lg.addColorStop(0, '#9aa8b2'); lg.addColorStop(1, '#5a6770');
+    ctx.fillStyle = lg;
+    ctx.fillRect(x0, yy, G.bevL[i] - x0, lh);
+    ctx.fillRect(G.bevR[i], yy, x0 + w - G.bevR[i], lh);
+    ctx.fillStyle = '#d6e2e8'; ctx.fillRect(G.bevL[i] - 1, yy, 1, lh); ctx.fillRect(G.bevR[i], yy, 1, lh);
+  }
+  ctx.strokeStyle = 'rgba(80,255,130,.45)'; ctx.lineWidth = 0.6;
+  ctx.beginPath(); ctx.moveTo(cx, y0); ctx.lineTo(cx, y0 + h); ctx.moveTo(x0, cy); ctx.lineTo(x0 + w, cy); ctx.stroke();
+  ctx.restore();
+}
+
 function drawBanners() {
   G.banners.forEach((b, k) => {
     const a = Math.min(1, b.t / 0.15, (b.dur - b.t) / 0.3);
@@ -1241,18 +1357,22 @@ function render() {
       g.font = `700 9px ${FONT_NUM}`; g.fillStyle = '#bfffe6'; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillText(`GANTRY ${Math.round((180 + prog * 360) % 360)}°`, b.cx, b.cy + ay - 14);
     }
-    const blink = !arcing && s.inv > 0 && Math.floor(s.inv * 16) % 2 === 0;
+    const imrt = !!G.im && !arcing;
+    if (imrt) drawImrtField();
+    const blink = !arcing && !imrt && s.inv > 0 && Math.floor(s.inv * 16) % 2 === 0;
     let rot = 0;
-    if (arcing) { const t = arcTarget(); rot = Math.atan2(t.y - s.y, t.x - s.x) + Math.PI / 2; }
+    if (arcing || imrt) { const t = arcTarget(); rot = Math.atan2(t.y - s.y, t.x - s.x) + Math.PI / 2; }
     drawShip(s.x, s.y, c.accent, G.time, blink ? 0.35 : 1, rot);
-    if (G.weapon === 'i' && !arcing && G.mlc) {
-      // MLC leaves above the collimator: open = lit, closed = steel
-      for (let k = 0; k < 7; k++) {
-        const lx = s.x + (k - 3) * 9 - 4, ly = s.y - 40, f = G.mlc[k];
-        g.fillStyle = '#5d6b76'; g.fillRect(lx, ly, 8, 7);
-        if (f > 0) { g.fillStyle = `rgba(126,243,200,${0.35 + 0.6 * f})`; const gw = 8 * f; g.fillRect(lx + (8 - gw) / 2, ly, gw, 7); }
-        g.strokeStyle = '#26323b'; g.lineWidth = 0.6; g.strokeRect(lx, ly, 8, 7);
+    if (imrt && G.imView && !G.imView.moving) {
+      // MLC on the collimator, in the ship's own frame
+      g.save(); g.translate(s.x, s.y); g.rotate(rot);
+      const open = G.imView.open;
+      for (let j = 0; j < IMRT_COLS; j++) {
+        const lx = (j - (IMRT_COLS - 1) / 2) * 5.4 - 2.6;
+        g.fillStyle = open[j] ? 'rgba(126,243,200,.95)' : '#5d6b76'; g.fillRect(lx, -36, 5.2, 7);
+        g.strokeStyle = '#1d272e'; g.lineWidth = 0.5; g.strokeRect(lx, -36, 5.2, 7);
       }
+      g.restore();
     }
     if (charKey === 'physicist' && G.sp.active > 0) {
       g.beginPath();
@@ -1309,6 +1429,7 @@ function render() {
     g.font = `700 11px ${FONT_NUM}`; g.fillStyle = '#ff6b78'; g.fillText('INTERLOCK', W / 2, y - 6);
     g.font = `600 10px ${FONT_UI}`; g.fillStyle = '#ffd5d9'; g.fillText(G.interlockMsg + ' · 리셋 중', W / 2, y + 8);
   }
+  if (state === 'play' || state === 'paused') drawBEV();
   drawBanners();
   drawHUD();
 }
@@ -1335,7 +1456,7 @@ function showTitle() {
   show(`
     <div class="brand"><img src="${LOGO}" alt="DosiCare — Expertise &amp; Support"></div>
     <h1 class="logo">암 퇴치 작전</h1>
-    <div class="tag">Linac Flight Unit · v1.3/div>
+    <div class="tag">Linac Flight Unit · v1.4/div>
     <p class="lead">리니악 비행선을 몰고 환자 몸속으로.<br>암에는 처방선량을, 정상 장기에는 최소 선량을.</p>
     <div class="panel">
       <div class="kv"><span>암 체력</span><b>처방선량 (Gy)</b></div>
@@ -1460,7 +1581,7 @@ function pauseGame() {
   if (state !== 'play') return;
   state = 'paused';
   show(`<h3>Beam Off</h3><h2>일시정지</h2>
-    <div class="panel"><p class="dim" style="font-size:.82em">조작: 끌어서 이동 · 빔 자동 · 양성자는 자동 조준, 톡 하면 그 자리로<br>PC: 방향키/WASD 이동 · 1–5 무기 · Space 특기 · R RapidArc · P 일시정지</p></div>
+    <div class="panel"><p class="dim" style="font-size:.82em">조작: 끌어서 이동 · 빔 자동 · 양성자는 자동 조준, 톡 하면 그 자리로<br>PC: 방향키/WASD 이동 · 1–4 무기 · Space 특기 · R RapidArc · P 일시정지</p></div>
     <button class="btn" id="res">계속하기</button><button class="btn ghost" id="quit">그만하고 처음으로</button>`);
   $('#res').onclick = resumeGame;
   $('#quit').onclick = showTitle;

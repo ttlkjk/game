@@ -1,0 +1,1367 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>DosiCare 암 퇴치 작전</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one fixed portrait "console" (400x760 logical) scaled to fit; canvas on top, control bar below, DOM overlays for menus.
+   Look: dark treatment-planning-system screen. Single dark theme on purpose. */
+:root{
+  --bg:#06080b; --panel:#0d1217; --panel2:#141c23; --line:#25333d;
+  --fg:#dbe5ea; --dim:#7f919d; --accent:#2fd3c5; --warn:#ffb347; --danger:#ff4d5e;
+  --font-ui:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-num:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --font-logo:"Black Han Sans","IBM Plex Sans KR","Malgun Gothic",sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);overflow:hidden;
+  font-family:var(--font-ui);-webkit-user-select:none;user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent}
+#app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+#game{--s:1;position:relative;width:400px;height:760px;font-size:calc(16px*var(--s));background:var(--bg);overflow:hidden}
+#cv{position:absolute;left:0;top:0;display:block;touch-action:none}
+#bar{position:absolute;left:0;right:0;bottom:0;height:calc(100% * 100 / 760);box-sizing:border-box;
+  display:grid;grid-template-columns:repeat(4,1fr) 1.35fr;gap:.4em;padding:.5em .55em .6em;
+  background:var(--panel);border-top:1px solid var(--line)}
+.wbtn,.sbtn{position:relative;border:1px solid var(--line);background:var(--panel2);color:var(--fg);
+  border-radius:.6em;font:inherit;padding:.3em .2em;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:.15em;touch-action:manipulation;cursor:pointer;overflow:hidden}
+.wbtn .nm{font-weight:700;font-size:.95em;line-height:1.1}
+.wbtn .sub{font-family:var(--font-num);font-size:.58em;color:var(--dim);letter-spacing:.02em;white-space:nowrap}
+.wbtn .ico{width:1.7em;height:1.1em}
+.wbtn .g{position:absolute;left:.4em;right:.4em;bottom:.3em;height:.18em;border-radius:1em;background:#1f2a32;overflow:hidden}
+.wbtn .g i{display:block;height:100%;width:100%;background:var(--accent)}
+.wbtn.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent),0 0 .8em rgba(47,211,197,.25)}
+.wbtn.on .nm{color:var(--accent)}
+.sbtn{--cd:0;--ca:var(--accent);border-color:var(--ca)}
+.sbtn::after{content:"";position:absolute;inset:0;background:conic-gradient(rgba(4,6,8,.72) calc(var(--cd)*360deg),transparent 0);pointer-events:none}
+.sbtn .nm{font-weight:700;font-size:.9em;color:var(--ca)}
+.sbtn .st{font-family:var(--font-num);font-size:.62em;color:var(--dim)}
+.sbtn.ready{box-shadow:0 0 1em color-mix(in srgb,var(--ca) 35%,transparent)}
+.sbtn.active{background:color-mix(in srgb,var(--ca) 22%,var(--panel2))}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#pause{position:absolute;top:.35em;right:.4em;width:2.1em;height:2.1em;border-radius:.5em;border:1px solid var(--line);
+  background:var(--panel2);color:var(--fg);font:inherit;font-size:1em;display:flex;align-items:center;justify-content:center;gap:.2em;cursor:pointer}
+#pause i{display:block;width:.22em;height:.75em;background:var(--fg);border-radius:.05em}
+#pause[hidden]{display:none}
+.screen{position:absolute;inset:0;z-index:5;box-sizing:border-box;padding:1.2em 1.1em;overflow-y:auto;
+  background:rgba(6,8,11,.88);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;flex-direction:column;
+  justify-content:center;gap:.9em;touch-action:pan-y}
+.screen[hidden]{display:none}
+.logo{font-family:var(--font-logo);font-weight:400;font-size:2.7em;line-height:1;letter-spacing:.01em;margin:0;text-align:center;
+  background:linear-gradient(180deg,#e9fffd 0%,var(--accent) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand{background:#fff;border-radius:.9em;padding:.55em .9em;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 .6em 2em rgba(47,211,197,.12)}
+.brand img{display:block;width:100%;height:auto}
+.brand.sm{width:55%;margin:0 auto;padding:.35em .6em;border-radius:.6em}
+.tag{font-family:var(--font-num);font-size:.68em;letter-spacing:.18em;color:var(--dim);text-align:center;text-transform:uppercase}
+.lead{font-size:1.05em;text-align:center;margin:0;line-height:1.5;text-wrap:balance}
+h2{font-family:var(--font-logo);font-weight:400;font-size:1.9em;margin:0;line-height:1.15;text-wrap:balance}
+h3{font-size:.8em;margin:0;color:var(--dim);font-family:var(--font-num);letter-spacing:.14em;text-transform:uppercase;font-weight:500}
+p{margin:0;line-height:1.55;font-size:.92em}
+.dim{color:var(--dim)}
+.btn{font:inherit;font-weight:700;font-size:1.05em;border-radius:.65em;border:1px solid var(--accent);background:var(--accent);color:#04201e;
+  padding:.8em 1em;cursor:pointer;touch-action:manipulation;width:100%}
+.btn.ghost{background:transparent;color:var(--fg);border-color:var(--line)}
+.btn:disabled{opacity:.35}
+.row{display:flex;gap:.6em}
+.row .btn{flex:1}
+.cards{display:flex;flex-direction:column;gap:.6em}
+.card{font:inherit;color:var(--fg);text-align:left;display:grid;grid-template-columns:4.4em 1fr;gap:.8em;align-items:center;
+  background:var(--panel2);border:1px solid var(--line);border-radius:.8em;padding:.7em;cursor:pointer;touch-action:manipulation}
+.card svg{width:4.4em;height:4.4em;display:block}
+.card .cn{font-weight:700;font-size:1.1em}
+.card .cr{font-size:.72em;color:var(--dim);margin-left:.35em;font-weight:400}
+.card .cs{font-size:.8em;margin-top:.25em;line-height:1.45}
+.card .cs b{color:var(--ca)}
+.card .cp{font-size:.72em;color:var(--dim);margin-top:.2em}
+.card.sel{border-color:var(--ca);box-shadow:inset 0 0 0 1px var(--ca)}
+.chips{display:flex;flex-wrap:wrap;gap:.35em}
+.chip{font-family:var(--font-num);font-size:.7em;border:1px solid var(--c,var(--line));color:var(--c,var(--fg));border-radius:2em;padding:.2em .6em;white-space:nowrap}
+.panel{background:var(--panel2);border:1px solid var(--line);border-radius:.8em;padding:.8em .9em;display:flex;flex-direction:column;gap:.55em}
+.dvh{display:grid;grid-template-columns:5.6em 1fr 5.4em;gap:.5em;align-items:center;font-size:.8em}
+.dvh .bar{height:.5em;background:#1d2830;border-radius:1em;position:relative;overflow:hidden}
+.dvh .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:1em}
+.dvh .v{font-family:var(--font-num);text-align:right;font-variant-numeric:tabular-nums;font-size:.92em}
+.grade{font-family:var(--font-logo);font-size:2.6em;line-height:1}
+.kv{display:flex;justify-content:space-between;font-size:.85em}
+.kv b{font-weight:700;font-variant-numeric:tabular-nums}
+.big{font-family:var(--font-num);font-size:1.6em;font-weight:700;color:var(--accent);text-align:center}
+.fx{font-family:var(--font-num);color:var(--accent);font-size:.8em;letter-spacing:.12em}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="game">
+    <canvas id="cv"></canvas>
+    <button id="pause" type="button" aria-label="일시정지" hidden><i></i><i></i></button>
+    <div id="bar">
+      <button class="wbtn on" data-w="x" type="button"><svg class="ico" viewBox="0 0 34 22"><path d="M17 1v20" stroke="#bff6ff" stroke-width="2.4"/><path d="M11 5v13M23 5v13" stroke="#5fd8ff" stroke-width="1.2" opacity=".6"/></svg><span class="nm">X선</span><span class="sub">6 MV</span></button>
+      <button class="wbtn" data-w="e" type="button"><svg class="ico" viewBox="0 0 34 22"><g fill="#a99bff"><circle cx="17" cy="4" r="2.2"/><circle cx="9" cy="7" r="2.2"/><circle cx="25" cy="7" r="2.2"/><circle cx="4" cy="12" r="2"/><circle cx="30" cy="12" r="2"/></g><path d="M17 21 17 8M17 21 9 9M17 21 25 9" stroke="#a99bff" stroke-width=".8" opacity=".5"/></svg><span class="nm">전자선</span><span class="sub">9 MeV</span></button>
+      <button class="wbtn" data-w="p" type="button"><svg class="ico" viewBox="0 0 34 22"><path d="M17 21V9" stroke="#ff9f6b" stroke-width="1.6" opacity=".55"/><circle cx="17" cy="6" r="4.6" fill="#ff7a59"/><circle cx="17" cy="6" r="2" fill="#fff1d6"/></svg><span class="nm">양성자</span><span class="sub">톡! 찍기</span><span class="g"><i></i></span></button>
+      <button class="wbtn" data-w="w" type="button"><svg class="ico" viewBox="0 0 34 22"><rect x="9" y="12" width="16" height="9" rx="1.5" fill="none" stroke="#4aa3ff" stroke-width="1.4"/><path d="M10 16h14v4H10z" fill="#4aa3ff" opacity=".55"/><g fill="#7cc4ff"><circle cx="17" cy="7" r="1.6"/><circle cx="12" cy="4" r="1.3"/><circle cx="22" cy="4" r="1.3"/><circle cx="17" cy="1.8" r="1.1"/></g></svg><span class="nm">물대포</span><span class="sub">Blue Phantom</span><span class="g"><i></i></span></button>
+      <button class="sbtn" id="sbtn" type="button"><span class="nm" id="sname">특기</span><span class="st" id="sstat">준비</span></button>
+    </div>
+    <div class="screen" id="screen"></div>
+  </div>
+</div>
+<script>
+'use strict';
+/* ============ basics ============ */
+const $ = s => document.querySelector(s);
+const W = 400, H = 660;
+const HUD_H = 96, SHIP_MIN_Y = 494, SHIP_MAX_Y = 636, SHIP_MIN_X = 20, SHIP_MAX_X = 380, IMG_BOTTOM = 470;
+const FONT_UI = '"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+const FONT_NUM = '"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace';
+const LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAAAADHCAMAAAC+0RLsAAABgFBMVEW80NyegEVib4AfMD++sIo/UF8gL0D+/v4nS26rxmgsU3R4eHithjcaOFA5ZoqFhYXn6enS1tkdQ2ZKaYZuhJeVlpanqKi0trhUdZDFycy5xtCUprarucaHmqsmQ1zn6NDJuI0eQVxle4/T163b4uczXYFsbW2zlVTC05YTLEJKY3q4y4bT2+LX47fVyamkvmTs8tfk3Mesika6pHMQJjpFWm4kOk96k6e1m2RviqMYPWHi2LbCq3fe58SlwV7RwZi+0JCjey6WrMGivV2cssN+gH49YHzBroOddSuAgH5cgJ1bgaG+rIIMHS8+cJaesL3KvqBBUF5ATmjEsH+Af4BXfqCAf39+kJ/g7L3Av8BfcXyAj6CfoJ+duV9ATly7oF8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAU3F96AAAAYHRSTlP///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////9ebwvOAAAra0lEQVR42u2dCWPaRteoe1eIHKIFISEJWRiIQ1hsHAdjkzhx0jT52rd9l2+7+73//1/cM6NtZjQjjUA4TpnTNiU2SCA9nH3O/NRSouQ7yk/qEihRACpRACpRogBUogBUokQBqEQBqETJ0wXQMP1YPJ8nAyzxg+yvkoIOapoTQ90aBaBYvNBmZTQaxX/uLn0QfJS7TRgMgENFoQKQL4uwO9OwvNQSWWtNyddZF6Rv2xhDc6JukgKwIIO+prWbIq6dCvlDRGF/ZAOD3kJpQgUg6wQG3XbbstoHlJjwNVC4AQgVgwpAmsBwdmgCMxBnYI9DV3mECkDKDbxba+3HEgShHfrKHVQA5mLa3ccjEDPYtx2lBhWAOYHhuv24os3sQHmDCsBcB2qPTeC6awdKCyoAE3G67fZ3QHCgCFQAficViBAEAhfqxikAkQSPrwJRONIPfaUEFYBIBY7a30MgGHGVElQAIhW4/k4E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'; // assets/dosicare_logo.png, embedded so the game stays a single file
+const markImg = new Image(); markImg.src = 'data:image/png;base64,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'; // assets/dosicare_mark.png
+const cv = $('#cv'), ctx = cv.getContext('2d');
+let S = 1, DPR = 1;
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[(Math.random() * a.length) | 0];
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const inE = (x, y, o) => { const dx = (x - o.cx) / o.rx, dy = (y - o.cy) / o.ry; return dx * dx + dy * dy <= 1; };
+const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
+
+function layout() {
+  const app = $('#app'), cs = getComputedStyle(app);
+  const aw = app.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const ah = app.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  S = Math.max(0.3, Math.min(aw / 400, ah / 760));
+  const g = $('#game');
+  g.style.setProperty('--s', S);
+  g.style.width = 400 * S + 'px'; g.style.height = 760 * S + 'px';
+  DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+  cv.width = Math.round(W * S * DPR); cv.height = Math.round(H * S * DPR);
+  cv.style.width = W * S + 'px'; cv.style.height = H * S + 'px';
+}
+window.addEventListener('resize', layout);
+
+/* ============ characters ============ */
+const CHARS = {
+  doctor: { name: '의사', role: '방사선종양학과 전문의', accent: '#ff7d93', special: '윤곽 그리기',
+    sdesc: '6초 동안 숨은 미세 병변이 보이고, 암에 주는 선량이 1.3배', passive: '평소에도 암 선량 +10%', dur: 6, cd: 22 },
+  therapist: { name: '방사선사', role: 'RTT', accent: '#4dd6ff', special: '호흡 게이팅',
+    sdesc: '6초 동안 움직이는 암이 멈추고, 빔이 알아서 따라감', passive: '이동이 빠르고, 출력 오차 흔들림 절반', dur: 6, cd: 20 },
+  physicist: { name: '의학물리사', role: 'Medical Physicist', accent: '#ffc24d', special: 'QA 보호막',
+    sdesc: '6초 동안 정상 장기 선량 0, 출력 오차를 0으로 보정', passive: '출력 오차가 절반 속도로 쌓이고, 인터락이 덜 남', dur: 6, cd: 20 },
+};
+
+function avatarSVG(k) {
+  const c = CHARS[k].accent;
+  const skin = '#f0c9a4', hair = '#2b2420';
+  let body = '', extra = '';
+  if (k === 'doctor') {
+    body = `<path d="M14 80c0-17 11-26 26-26s26 9 26 26z" fill="#eef3f6"/><path d="M34 55l6 10 6-10" fill="#9fb4c2"/><path d="M40 65v15" stroke="#c9d6de" stroke-width="1.2"/>`;
+    extra = `<path d="M30 58c-4 8-3 14 3 16" stroke="#3b4a55" stroke-width="2" fill="none"/><circle cx="34" cy="74" r="3" fill="#3b4a55"/><rect x="47" y="64" width="9" height="2.4" rx="1" fill="${c}"/>`;
+  } else if (k === 'therapist') {
+    body = `<path d="M14 80c0-17 11-26 26-26s26 9 26 26z" fill="#244a73"/><path d="M33 55l7 9 7-9" fill="#1b3858"/>`;
+    extra = `<g stroke="${c}" stroke-width="1.6"><path d="M50 62v12M44 68h12"/></g><circle cx="50" cy="68" r="3.6" fill="none" stroke="${c}" stroke-width="1"/><path d="M22 30c2-10 9-15 18-15s16 5 18 15c-8-3-28-3-36 0z" fill="#244a73"/>`;
+  } else {
+    body = `<path d="M14 80c0-17 11-26 26-26s26 9 26 26z" fill="#eef3f6"/><path d="M34 55l6 10 6-10" fill="#4a5a66"/>`;
+    extra = `<g fill="none" stroke="#2b3640" stroke-width="1.6"><circle cx="34" cy="37" r="4.2"/><circle cx="46" cy="37" r="4.2"/><path d="M38.2 37h3.6"/></g><rect x="22" y="62" width="11" height="4" rx="2" fill="${c}"/><rect x="18" y="63" width="5" height="2" fill="#9aa8b2"/>`;
+  }
+  return `<svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="39" fill="${c}" opacity=".16"/><circle cx="40" cy="40" r="38.5" fill="none" stroke="${c}" stroke-opacity=".5"/>${body}<circle cx="40" cy="36" r="13" fill="${skin}"/><path d="M27 34c0-9 6-13 13-13s13 4 13 13c-3-5-8-6-13-6s-10 1-13 6z" fill="${hair}"/>${extra}</svg>`;
+}
+
+/* ============ stages ============ */
+function ell(g, cx, cy, rx, ry, v, a) {
+  g.beginPath(); g.ellipse(cx, cy, rx, ry, a || 0, 0, Math.PI * 2);
+  if (typeof v === 'number') { v = Math.min(255, Math.round(v * 1.22 + 10)); v = `rgb(${v},${v},${v})`; }
+  g.fillStyle = v; g.fill();
+}
+function dots(g, cx, cy, rx, ry, n, v, rmax) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * 0.9;
+    ell(g, cx + Math.cos(a) * rx * r, cy + Math.sin(a) * ry * r, rand(0.6, rmax), rand(0.6, rmax), v + rand(-10, 10));
+  }
+}
+function couch(g, y) {
+  g.strokeStyle = 'rgb(150,150,150)'; g.lineWidth = 2.5;
+  g.beginPath(); g.moveTo(10, y + 6); g.quadraticCurveTo(200, y - 6, 390, y + 6); g.stroke();
+  g.strokeStyle = 'rgb(70,70,70)'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(14, y + 12); g.quadraticCurveTo(200, y, 386, y + 12); g.stroke();
+}
+
+const STAGES = [
+  {
+    key: 'lung', body: { cx: 200, cy: 290, rx: 182, ry: 127 }, fx: 'Fx 1', short: '폐암', title: '폐암 · 우상엽',
+    intro: '숨 쉴 때마다 종양이 움직입니다. 4D CT는 찍어 두셨죠?',
+    tip: '손가락으로 끌면 비행선이 움직이고, 빔은 자동으로 나갑니다. 왼쪽 폐·심장·척수는 아껴 주세요.',
+    hint: ['끌어서 이동 · 빔은 자동', '빔 경로 위의 장기도 선량을 받습니다'],
+    ct(g) {
+      ell(g, 200, 290, 182, 127, 62); ell(g, 200, 290, 171, 117, 96);
+      ell(g, 122, 285, 63, 93, 22); ell(g, 280, 285, 61, 93, 22);
+      dots(g, 122, 285, 60, 90, 70, 58, 2.2); dots(g, 280, 285, 58, 90, 70, 58, 2.2);
+      ell(g, 222, 262, 46, 42, 112); ell(g, 214, 270, 22, 18, 120);
+      ell(g, 176, 222, 12, 12, 122); ell(g, 230, 344, 12, 12, 120);
+      ell(g, 200, 380, 25, 22, 212); ell(g, 200, 370, 9.5, 9.5, 88);
+      g.fillStyle = 'rgb(205,205,205)'; g.fillRect(196, 396, 8, 18);
+      ell(g, 200, 178, 17, 8, 205); ell(g, 200, 178, 10, 4, 150);
+      for (let i = 0; i < 9; i++) {
+        const a = Math.PI * (0.18 + i * 0.08);
+        for (const s of [-1, 1]) ell(g, 200 + s * Math.cos(a) * 174, 290 + Math.sin(a + Math.PI) * -118, 7, 4, 200, s * a);
+      }
+      ell(g, 90, 375, 34, 7, 190, -0.5); ell(g, 310, 375, 34, 7, 190, 0.5);
+      couch(g, 430);
+    },
+    oars: [
+      { name: '척수', cx: 200, cy: 370, rx: 9, ry: 9, limit: 45, factor: 1, color: '#ffe14d' },
+      { name: '심장', cx: 222, cy: 262, rx: 46, ry: 42, limit: 35, factor: 0.8, color: '#ff7ac8' },
+      { name: '좌폐', cx: 280, cy: 285, rx: 61, ry: 93, limit: 20, factor: 0.5, color: '#5ab4ff' },
+    ],
+    tumors: [{ kind: 'main', label: 'GTV', x: 115, y: 255, r: 20, rx: 60, motion: 'breath' }],
+    hidden: [{ x: 152, y: 322, r: 7 }, { x: 92, y: 336, r: 7 }],
+    cellEvery: 2.3, shootChance: 0, cellHp: 3, cellSpeed: [32, 50],
+  },
+  {
+    key: 'prostate', body: { cx: 200, cy: 290, rx: 187, ry: 122 }, fx: 'Fx 2', short: '전립선암', title: '전립선암',
+    intro: '직장이 빔 바로 앞에 있습니다. 환자분 관장은 하고 오셨답니다… 아마도.',
+    tip: '정가운데로 쏘면 직장이 다 맞습니다. 전립선 가장자리를 노리거나, 양성자로 톡 찍어 보세요.',
+    hint: ['정가운데 = 직장 직격', '양성자는 찍은 자리에서만 터집니다'],
+    ct(g) {
+      ell(g, 200, 290, 187, 122, 62); ell(g, 200, 290, 173, 109, 94);
+      for (const s of [-1, 1]) {
+        ell(g, 200 + s * 108, 295, 40, 46, 150); ell(g, 200 + s * 108, 295, 30, 36, 96);
+        ell(g, 200 + s * 108, 295, 27, 27, 218); ell(g, 200 + s * 108, 295, 18, 18, 172);
+        ell(g, 200 + s * 62, 250, 9, 9, 118); ell(g, 200 + s * 66, 268, 7, 7, 114);
+      }
+      ell(g, 200, 238, 44, 30, 64);
+      ell(g, 200, 300, 26, 24, 106); ell(g, 200, 300, 14, 12, 112);
+      ell(g, 200, 345, 15, 14, 104); ell(g, 200, 345, 7, 6, 8);
+      ell(g, 200, 392, 13, 8, 205);
+      couch(g, 422);
+    },
+    oars: [
+      { name: '직장', cx: 200, cy: 345, rx: 15, ry: 14, limit: 40, factor: 1.2, color: '#d29a5c' },
+      { name: '방광', cx: 200, cy: 238, rx: 44, ry: 30, limit: 60, factor: 0.5, color: '#ffd36b' },
+      { name: '우 대퇴골두', cx: 92, cy: 295, rx: 27, ry: 27, limit: 45, factor: 0.6, color: '#7cf0a0' },
+      { name: '좌 대퇴골두', cx: 308, cy: 295, rx: 27, ry: 27, limit: 45, factor: 0.6, color: '#7cf0a0' },
+    ],
+    tumors: [{ kind: 'main', label: 'CTV', x: 200, y: 300, r: 26, rx: 78, motion: 'gas' }],
+    hidden: [{ x: 168, y: 282, r: 6 }, { x: 232, y: 284, r: 6 }],
+    cellEvery: 2.0, shootChance: 0.18, cellHp: 3.5, cellSpeed: [34, 54],
+  },
+  {
+    key: 'brain', body: { cx: 200, cy: 300, rx: 138, ry: 160 }, fx: 'Fx 3', short: '교모세포종', title: '교모세포종 · 보스',
+    intro: '돌아다니고, 안 맞으면 다시 자랍니다. 수정체 한계는 10 Gy. 환자분, 눈 감으세요.',
+    tip: '보스는 단계가 오를수록 탄을 뿌립니다. 마지막 단계는 저산소 코어라 선량이 덜 먹힙니다.',
+    hint: ['안 맞히면 재증식합니다', '보스가 가장자리로 가면 수정체 주의'],
+    ct(g) {
+      ell(g, 200, 300, 138, 160, 84); ell(g, 200, 300, 132, 154, 226); ell(g, 200, 300, 123, 145, 102);
+      for (const s of [-1, 1]) {
+        ell(g, 200 + s * 50, 165, 22, 20, 222); ell(g, 200 + s * 50, 165, 16, 16, 78);
+        ell(g, 200 + s * 50, 154, 7, 3.5, 196);
+        ell(g, 200 + s * 14, 278, 7, 30, 38, s * 0.15);
+        ell(g, 200 + s * 36, 410, 30, 22, 108);
+      }
+      g.strokeStyle = 'rgb(170,170,170)'; g.lineWidth = 1.2;
+      g.beginPath(); g.moveTo(200, 150); g.lineTo(200, 245); g.moveTo(200, 312); g.lineTo(200, 345); g.stroke();
+      ell(g, 200, 205, 15, 6, 118);
+      ell(g, 200, 372, 17, 20, 110); ell(g, 200, 398, 4, 3, 40);
+      couch(g, 468);
+    },
+    oars: [
+      { name: '뇌간', cx: 200, cy: 372, rx: 17, ry: 20, limit: 50, factor: 1, color: '#ff9a4d' },
+      { name: '시신경교차', cx: 200, cy: 205, rx: 15, ry: 6, limit: 50, factor: 1, color: '#c78bff' },
+      { name: '우 수정체', cx: 150, cy: 154, rx: 7, ry: 3.5, limit: 10, factor: 0.6, color: '#6be6ff' },
+      { name: '좌 수정체', cx: 250, cy: 154, rx: 7, ry: 3.5, limit: 10, factor: 0.6, color: '#6be6ff' },
+    ],
+    tumors: [{ kind: 'boss', label: 'GBM', x: 200, y: 285, r: 30, rx: 60, motion: 'wander' }],
+    hidden: [{ x: 158, y: 245, r: 6 }, { x: 248, y: 322, r: 6 }, { x: 224, y: 228, r: 6 }],
+    cellEvery: 1.7, shootChance: 0.2, cellHp: 4, cellSpeed: [36, 56],
+  },
+];
+
+function buildCT(st) {
+  const c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2;
+  const g = c.getContext('2d'); g.scale(2, 2);
+  // viewport background: steel-blue TPS window with a 1 cm (20 px) grid
+  const b = st.body;
+  const bgG = g.createRadialGradient(b.cx, b.cy, 60, b.cx, b.cy, 430);
+  bgG.addColorStop(0, '#1d3d4f'); bgG.addColorStop(0.5, '#122a38'); bgG.addColorStop(1, '#0a1720');
+  g.fillStyle = bgG; g.fillRect(0, 0, W, H);
+  g.lineWidth = 0.6;
+  for (let x = 0; x <= W; x += 20) {
+    g.strokeStyle = x % 100 === 0 ? 'rgba(110,200,220,.22)' : 'rgba(110,200,220,.09)';
+    g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke();
+  }
+  for (let y = 0; y <= H; y += 20) {
+    g.strokeStyle = y % 100 === 0 ? 'rgba(110,200,220,.22)' : 'rgba(110,200,220,.09)';
+    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+  }
+  // external contour glow
+  g.save(); g.shadowColor = 'rgba(140,235,245,.55)'; g.shadowBlur = 26;
+  ell(g, b.cx, b.cy, b.rx, b.ry, '#0b0f12'); g.restore();
+  st.ct(g);
+  g.beginPath(); g.ellipse(b.cx, b.cy, b.rx + 1.5, b.ry + 1.5, 0, 0, Math.PI * 2);
+  g.strokeStyle = 'rgba(120,255,170,.75)'; g.lineWidth = 1.2; g.stroke();
+  const id = g.getImageData(0, 0, c.width, c.height), d = id.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i] > 10 && Math.abs(d[i] - d[i + 2]) < 3) { const n = (Math.random() - 0.5) * 18; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+  }
+  g.putImageData(id, 0, 0);
+  return c;
+}
+
+/* dose colorwash: accumulated where beams actually went (8 px cells) */
+const DG = 8, GW = Math.ceil(W / DG), GH = Math.ceil(IMG_BOTTOM / DG);
+const doseCv = document.createElement('canvas'); doseCv.width = GW; doseCv.height = GH;
+const doseCtx = doseCv.getContext('2d'), doseImg = doseCtx.createImageData(GW, GH);
+function addDose(x, y, v) {
+  if (!G || !inE(x, y, G.st.body)) return;
+  const i = (x / DG) | 0, j = (y / DG) | 0;
+  if (i < 0 || j < 0 || i >= GW || j >= GH) return;
+  G.dg[j * GW + i] += v;
+}
+function drawDoseWash() {
+  const d = doseImg.data, dg = G.dg;
+  for (let k = 0; k < dg.length; k++) {
+    const f = Math.min(1, dg[k] / 4), o = k * 4;
+    if (f < 0.04) { d[o + 3] = 0; continue; }
+    const c = isoColor(f);
+    d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 40 + 110 * f;
+  }
+  doseCtx.putImageData(doseImg, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(doseCv, 0, 0, GW * DG, GH * DG);
+}
+
+/* room decor: lasers, orientation, scale, plan info, floating motes */
+function drawMotes(t) {
+  for (let i = 0; i < 34; i++) {
+    const sp = 6 + (i * 37 % 11), span = H - HUD_H;
+    const y = H - ((t * sp + i * 53) % span);
+    const x = (i * 97.3) % W + Math.sin(t * 0.4 + i) * 9;
+    ctx.globalAlpha = 0.12 + (i % 5) * 0.05;
+    ctx.fillStyle = i % 4 ? '#8fe9f0' : '#c6f7d8';
+    ctx.beginPath(); ctx.arc(x, y, 0.7 + (i % 3) * 0.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawRoomDecor() {
+  const st = G.st, iso = st.tumors[0];
+  // room lasers (green)
+  ctx.strokeStyle = 'rgba(80,255,130,.32)'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, iso.y); ctx.lineTo(iso.x - 34, iso.y); ctx.moveTo(iso.x + 34, iso.y); ctx.lineTo(W, iso.y);
+  ctx.moveTo(iso.x, HUD_H); ctx.lineTo(iso.x, iso.y - 34); ctx.moveTo(iso.x, iso.y + 34); ctx.lineTo(iso.x, H);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(80,255,130,.7)';
+  for (const [x, y] of [[4, iso.y], [W - 4, iso.y]]) { ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x + (x < 200 ? 5 : -5), y); ctx.lineTo(x, y + 4); ctx.fill(); }
+  // orientation
+  ctx.font = `700 11px ${FONT_NUM}`; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(255,214,102,.85)';
+  ctx.textAlign = 'left'; ctx.fillText('R', 12, iso.y - 12);
+  ctx.textAlign = 'right'; ctx.fillText('L', W - 12, iso.y - 12);
+  ctx.textAlign = 'center'; ctx.fillText('A', 200, HUD_H + 12); ctx.fillText('P', 200, 490);
+  // plan info
+  ctx.font = `500 8px ${FONT_NUM}`; ctx.fillStyle = 'rgba(170,215,225,.62)';
+  ctx.textAlign = 'left';
+  ctx.fillText('AXIAL · W 400 / L 40', 8, HUD_H + 12);
+  ctx.fillText(`Z ${st.key === 'brain' ? '+8.5' : st.key === 'lung' ? '+2.5' : '−4.0'} cm`, 8, HUD_H + 23);
+  ctx.textAlign = 'right';
+  ctx.fillText(`PLAN DC_${st.key.toUpperCase()}_v1`, W - 8, HUD_H + 12);
+  ctx.fillText(`Rx ${iso.rx} Gy · ${st.fx}/3`, W - 8, HUD_H + 23);
+  // isodose legend
+  const lx = W - 12, ly = HUD_H + 34, lh = 70;
+  const lg = ctx.createLinearGradient(0, ly, 0, ly + lh);
+  [[0, 1], [0.05, 0.95], [0.2, 0.8], [0.5, 0.5], [1, 0]].forEach(([p, f]) => { const c = isoColor(f); lg.addColorStop(p, `rgb(${c})`); });
+  ctx.fillStyle = lg; ctx.globalAlpha = 0.8; ctx.fillRect(lx, ly, 4, lh); ctx.globalAlpha = 1;
+  ctx.font = `500 7px ${FONT_NUM}`; ctx.fillStyle = 'rgba(170,215,225,.62)';
+  ctx.fillText('100%', lx - 3, ly + 3); ctx.fillText('50%', lx - 3, ly + lh / 2); ctx.fillText('dose', lx - 3, ly + lh - 2);
+  // scale bar 5 cm
+  ctx.strokeStyle = 'rgba(200,230,236,.65)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(10, 490); ctx.lineTo(110, 490);
+  for (let k = 0; k <= 5; k++) { const x = 10 + k * 20; ctx.moveTo(x, 490); ctx.lineTo(x, k % 5 ? 487 : 485); }
+  ctx.stroke();
+  ctx.textAlign = 'left'; ctx.font = `500 8px ${FONT_NUM}`; ctx.fillStyle = 'rgba(200,230,236,.7)'; ctx.fillText('5 cm', 114, 490);
+  ctx.textAlign = 'right'; ctx.fillText('G 180° · C 0° · SAD 100', W - 8, 490);
+}
+
+/* ============ game state ============ */
+let state = 'title'; // title, select, intro, play, ending, result, over, victory, paused
+let charKey = null, G = null, ctImg = null, totalScore = 0, stageStartScore = 0;
+let uid = 1;
+const keys = {};
+
+function mkTumor(t, hidden) {
+  const n = 18, jit = [];
+  for (let i = 0; i < n; i++) jit.push(rand(0.84, 1.14));
+  return {
+    id: uid++, kind: hidden ? 'hidden' : t.kind, label: hidden ? '미세병변' : t.label,
+    bx: t.x, by: t.y, x: t.x, y: t.y, r: t.r, rx: hidden ? 10 : t.rx, dose: 0, alive: true,
+    motion: hidden ? null : t.motion, mt: 0, jit, lastHit: -9, flash: 0, seen: false,
+    cellT: hidden ? rand(5, 9) : rand(1, 2), burstT: 3, phase: 1, regrowMsgT: 0, burstA: 0,
+  };
+}
+
+function startStage(i) {
+  const st = STAGES[i];
+  stageStartScore = totalScore;
+  G = {
+    i, st, time: 0, score: totalScore,
+    ship: { x: 130, y: 590, hp: 100, inv: 0 },
+    weapon: 'x', fireT: 1.0, pCharge: 1, tank: 100, waterOn: false,
+    drift: 0, driftDir: Math.random() < 0.5 ? -1 : 1, driftWarned: false, forcedT: 0,
+    interlock: 0, interlockMsg: '', nextInterlock: charKey === 'physicist' ? rand(55, 75) : rand(26, 40),
+    sp: { cd: 4, active: 0 },
+    oars: st.oars.map(o => ({ ...o, dose: 0, flash: 0 })),
+    tumors: [...st.tumors.map(t => mkTumor(t, false)), ...st.hidden.map(h => mkTumor(h, true))],
+    cells: [], bullets: [], eb: [], parts: [], texts: [], booms: [], banners: [],
+    clearT: -1, shake: 0, hintT: 5.5, cross: null,
+    gasT: rand(9, 13), gasOff: { x: 0, y: 0 }, gasTo: { x: 0, y: 0 }, waterBanner: 0,
+    stats: { cells: 0, escaped: 0 },
+    dg: new Float32Array(GW * GH),
+  };
+  ctImg = buildCT(st);
+  selectWeapon('x');
+  setSpecialUI();
+}
+
+/* ============ helpers: messages, particles ============ */
+function banner(text, sub, color, dur) {
+  G.banners.push({ text, sub: sub || '', color: color || '#2fd3c5', t: 0, dur: dur || 2.2 });
+  if (G.banners.length > 2) G.banners.shift();
+}
+function ftext(x, y, text, color, size) { G.texts.push({ x, y, text, color: color || '#fff', t: 0, size: size || 11 }); }
+function burst(x, y, color, n, sp) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = rand(20, sp || 140);
+    G.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rand(0.3, 0.7), max: 0.7, color, size: rand(1, 2.6) });
+  }
+}
+
+function doseMul() { return 1 + G.drift / 100; }
+function depositOAR(o, d) {
+  if (charKey === 'physicist' && G.sp.active > 0) return;
+  if (G.clearT >= 0 || state !== 'play') return;
+  o.dose += d * o.factor * doseMul();
+  o.flash = 0.22;
+  if (o.dose >= o.limit) gameOver('oar', o);
+}
+function tumorMul(t) {
+  let m = doseMul();
+  if (charKey === 'doctor') { m *= 1.1; if (G.sp.active > 0) m *= 1.3; }
+  if (t && t.kind === 'boss' && t.phase === 3) m *= 0.8;
+  return m;
+}
+function doseTumor(t, d) {
+  if (!t.alive) return;
+  t.dose += d * tumorMul(t); t.lastHit = G.time; t.flash = 0.08; t.seen = true;
+  if (t.dose >= t.rx) {
+    t.dose = t.rx; t.alive = false;
+    burst(t.x, t.y, '#ff5a6a', t.kind === 'hidden' ? 18 : 60, t.kind === 'hidden' ? 90 : 200);
+    G.booms.push({ x: t.x, y: t.y, r: t.r * 2.2, t: 0, dur: 0.6, color: '#ff8090' });
+    if (t.kind === 'hidden') { G.score += 500; ftext(t.x, t.y - 12, '미세병변 제거 +500', '#ff9be0', 11); }
+    else {
+      G.score += 2000; ftext(t.x, t.y - 20, '처방선량 도달!', '#fff', 14);
+      if (!G.tumors.some(u => u.alive && u.kind !== 'hidden')) stageClear();
+    }
+  }
+}
+function hitCell(c, d) {
+  c.hp -= d * tumorMul(null);
+  c.flash = 0.08;
+  if (c.hp <= 0 && !c.dead) {
+    c.dead = true; G.score += 50; G.stats.cells++;
+    burst(c.x, c.y, '#ff7a8a', 8, 90);
+  }
+}
+function hurt(n, why) {
+  const s = G.ship;
+  if (s.inv > 0 || state !== 'play' || G.clearT >= 0) return;
+  s.hp -= n; s.inv = 0.8; G.shake = 0.25;
+  ftext(s.x, s.y - 30, `-${n} ${why || ''}`.trim(), '#ff6b78', 12);
+  burst(s.x, s.y, '#ffb0a0', 10, 120);
+  if (s.hp <= 0) { s.hp = 0; gameOver('hp'); }
+}
+
+/* ============ weapons ============ */
+function jitter() {
+  return (Math.random() * 2 - 1) * Math.abs(G.drift) * 1.4 * (charKey === 'therapist' ? 0.5 : 1);
+}
+function fireX() {
+  const s = G.ship;
+  G.bullets.push({ type: 'x', x: s.x + jitter(), y: s.y - 26, vx: 0, vy: -720, hits: new Set(), mask: 0, life: 1.2 });
+}
+function fireE() {
+  const s = G.ship;
+  for (const deg of [-14, -7, 0, 7, 14]) {
+    const a = (deg - 90) * Math.PI / 180;
+    G.bullets.push({ type: 'e', x: s.x + jitter(), y: s.y - 24, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, hits: new Set(), mask: 0, travel: 0, range: 245 });
+  }
+}
+function fireW() {
+  const s = G.ship;
+  const a = (rand(-18, 18) - 90) * Math.PI / 180, v = rand(380, 460);
+  G.bullets.push({ type: 'w', x: s.x + rand(-3, 3), y: s.y - 24, vx: Math.cos(a) * v, vy: Math.sin(a) * v, hits: new Set(), mask: 0, travel: 0, range: rand(180, 220) });
+}
+function fireP(tx, ty) {
+  const s = G.ship;
+  if (G.pCharge < 1) { ftext(s.x, s.y - 34, '충전 중…', '#ffb27a', 10); return; }
+  G.pCharge = 0;
+  const d = dist(s.x, s.y - 26, tx, ty);
+  G.bullets.push({ type: 'p', x: s.x, y: s.y - 26, tx, ty, vx: (tx - s.x) / d * 640, vy: (ty - s.y + 26) / d * 640, hits: new Set(), mask: 0, left: d });
+  G.cross = { x: tx, y: ty, t: 0 };
+}
+function protonExplode(x, y) {
+  const R = 26;
+  G.booms.push({ x, y, r: R * 1.25, t: 0, dur: 0.45, color: '#ff8a5c', bragg: true });
+  burst(x, y, '#ffb36b', 22, 160);
+  for (let yy = y - R; yy <= y + R; yy += DG) for (let xx = x - R; xx <= x + R; xx += DG) {
+    const dd = dist(x, y, xx, yy); if (dd < R) addDose(xx, yy, 1.1 * (1 - dd / R));
+  }
+  for (const t of G.tumors) if (t.alive && dist(x, y, t.x, t.y) < R + t.r * 0.7) doseTumor(t, 5.5);
+  for (const c of G.cells) if (!c.dead && dist(x, y, c.x, c.y) < R + c.r) hitCell(c, 6);
+  for (const o of G.oars) {
+    const dx = (x - o.cx) / (o.rx + R * 0.6), dy = (y - o.cy) / (o.ry + R * 0.6);
+    if (dx * dx + dy * dy <= 1) depositOAR(o, 3.5);
+  }
+}
+const OAR_BASE = { x: 0.3, e: 0.25, p: 0.075, w: 0 };
+
+function nearestTarget(b) {
+  let best = null, bd = 1e9;
+  for (const t of G.tumors) if (t.alive && (t.kind !== 'hidden' || t.seen) && t.y < b.y) {
+    const d = Math.abs(t.x - b.x) + (b.y - t.y) * 0.15; if (d < bd) { bd = d; best = t; }
+  }
+  for (const c of G.cells) if (!c.dead && c.y < b.y) {
+    const d = Math.abs(c.x - b.x) + (b.y - c.y) * 0.15 + 20; if (d < bd) { bd = d; best = c; }
+  }
+  return best;
+}
+
+function updateBullets(dt) {
+  const gating = charKey === 'therapist' && G.sp.active > 0;
+  for (const b of G.bullets) {
+    if (gating && (b.type === 'x' || b.type === 'e')) {
+      const t = nearestTarget(b);
+      if (t) b.vx += clamp((t.x - b.x) * 9 - b.vx, -2400, 2400) * dt * 4;
+    }
+    b.x += b.vx * dt; b.y += b.vy * dt;
+    const step = Math.hypot(b.vx, b.vy) * dt;
+    if (b.travel !== undefined) b.travel += step;
+    if (b.type !== 'w') addDose(b.x, b.y, step * (b.type === 'x' ? 0.0035 : b.type === 'e' ? 0.005 : 0.001));
+    if (b.type === 'p') {
+      b.left -= step;
+      if (b.left <= 0) { b.x = b.tx; b.y = b.ty; b.dead = true; protonExplode(b.tx, b.ty); continue; }
+    }
+    // organs
+    if (b.type !== 'w') {
+      for (let k = 0; k < G.oars.length; k++) {
+        const o = G.oars[k];
+        if (!(b.mask & (1 << k)) && inE(b.x, b.y, o)) { b.mask |= 1 << k; depositOAR(o, OAR_BASE[b.type]); }
+      }
+    }
+    if (b.type === 'x' || b.type === 'e') {
+      for (const t of G.tumors) {
+        if (t.alive && !b.hits.has(t.id) && dist(b.x, b.y, t.x, t.y) < t.r) {
+          b.hits.add(t.id); doseTumor(t, b.type === 'x' ? 0.6 : 1.0);
+          if (b.type === 'e') { b.dead = true; break; }
+        }
+      }
+    }
+    if (!b.dead && b.type !== 'p') {
+      for (const c of G.cells) {
+        if (!c.dead && !b.hits.has(c.id) && dist(b.x, b.y, c.x, c.y) < c.r + 2) {
+          b.hits.add(c.id);
+          if (b.type === 'x') hitCell(c, 0.6);
+          else if (b.type === 'e') { hitCell(c, 1.0); b.dead = true; break; }
+          else if (b.type === 'w') { c.vy -= 150; c.slow = 1.2; hitCell(c, 0.15); b.dead = true; burst(b.x, b.y, '#7cc4ff', 3, 60); break; }
+        }
+      }
+    }
+    if (b.travel !== undefined && b.travel > b.range) b.dead = true;
+    if (b.y < HUD_H - 4 || b.x < -10 || b.x > W + 10) b.dead = true;
+  }
+  G.bullets = G.bullets.filter(b => !b.dead);
+}
+
+/* ============ update ============ */
+function update(dt) {
+  G.time += dt;
+  const ending = state !== 'play';
+  // particles & texts always
+  for (const p of G.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.96; p.vy *= 0.96; p.life -= dt; }
+  G.parts = G.parts.filter(p => p.life > 0);
+  for (const t of G.texts) { t.t += dt; t.y -= 18 * dt; }
+  G.texts = G.texts.filter(t => t.t < 1.1);
+  for (const b of G.booms) b.t += dt;
+  G.booms = G.booms.filter(b => b.t < b.dur);
+  for (const b of G.banners) b.t += dt;
+  G.banners = G.banners.filter(b => b.t < b.dur);
+  for (const o of G.oars) o.flash = Math.max(0, o.flash - dt);
+  G.shake = Math.max(0, G.shake - dt);
+  G.hintT -= dt;
+  if (G.cross) { G.cross.t += dt; if (G.cross.t > 0.9) G.cross = null; }
+  if (ending) return;
+
+  const s = G.ship;
+  // ship movement (keyboard)
+  const spd = (charKey === 'therapist' ? 330 : 260) * dt;
+  let kx = 0, ky = 0;
+  if (keys.ArrowLeft || keys.KeyA) kx -= 1; if (keys.ArrowRight || keys.KeyD) kx += 1;
+  if (keys.ArrowUp || keys.KeyW) ky -= 1; if (keys.ArrowDown || keys.KeyS) ky += 1;
+  s.x = clamp(s.x + kx * spd, SHIP_MIN_X, SHIP_MAX_X); s.y = clamp(s.y + ky * spd, SHIP_MIN_Y, SHIP_MAX_Y);
+  s.inv = Math.max(0, s.inv - dt);
+
+  // special
+  if (G.sp.active > 0) { G.sp.active -= dt; if (G.sp.active <= 0) G.sp.active = 0; }
+  else G.sp.cd = Math.max(0, G.sp.cd - dt);
+  const physShield = charKey === 'physicist' && G.sp.active > 0;
+
+  // output drift
+  if (physShield) G.drift = 0;
+  else G.drift += G.driftDir * (charKey === 'physicist' ? 0.075 : 0.15) * dt;
+  const ad = Math.abs(G.drift);
+  if (ad >= 3 && !G.driftWarned) {
+    G.driftWarned = true;
+    banner(`Output ${G.drift > 0 ? '+' : ''}${G.drift.toFixed(1)}%`, '아침 QA 하셨죠? 물대포로 보정하세요', '#ffb347', 2.6);
+  }
+  if (ad < 2) G.driftWarned = false;
+  G.forcedT -= dt;
+  if (ad >= 6 && G.forcedT <= 0 && G.interlock <= 0) {
+    G.interlock = 1.6; G.interlockMsg = 'DOSE 1 — Output 허용범위 초과'; G.forcedT = 4.5;
+  }
+
+  // random interlock
+  G.nextInterlock -= dt;
+  if (G.nextInterlock <= 0) {
+    G.interlock = 1.4;
+    G.interlockMsg = pick(['DOSE RATE', 'MLC 위치 오차', 'DOOR — 누가 문 열었어요?', 'GANTRY 충돌 방지', '진공 펌프 압력', 'TARGET 온도', 'SF6 가스 압력']);
+    G.nextInterlock = charKey === 'physicist' ? rand(55, 75) : rand(26, 40);
+  }
+  G.interlock = Math.max(0, G.interlock - dt);
+
+  // firing
+  G.pCharge = Math.min(1, G.pCharge + dt / 1.0);
+  G.waterOn = false;
+  if (G.interlock <= 0) {
+    G.fireT -= dt;
+    if (G.weapon === 'x' && G.fireT <= 0) { G.fireT = 0.15; fireX(); }
+    else if (G.weapon === 'e' && G.fireT <= 0) { G.fireT = 0.34; fireE(); }
+    else if (G.weapon === 'w' && G.tank > 0) {
+      G.waterOn = true;
+      if (G.fireT <= 0) { G.fireT = 0.07; fireW(); }
+    }
+  }
+  if (G.waterOn) {
+    G.tank = Math.max(0, G.tank - 22 * dt);
+    const fix = 2 * dt;
+    G.drift = Math.abs(G.drift) <= fix ? 0 : G.drift - Math.sign(G.drift) * fix;
+    s.hp = Math.min(100, s.hp + 6 * dt);
+    if (G.tank <= 0) ftext(s.x, s.y - 34, '물 채우는 중…', '#7cc4ff', 10);
+  } else G.tank = Math.min(100, G.tank + 12 * dt);
+
+  updateBullets(dt);
+
+  // tumors
+  const frozen = charKey === 'therapist' && G.sp.active > 0;
+  if (G.st.key === 'prostate') {
+    G.gasT -= dt;
+    if (G.gasT <= 0) {
+      G.gasTo = { x: rand(-8, 8), y: rand(-6, 6) }; G.gasT = rand(11, 16);
+      banner('직장 가스!', '전립선이 밀렸습니다', '#d29a5c', 1.8);
+    }
+    G.gasOff.x += (G.gasTo.x - G.gasOff.x) * Math.min(1, dt * 5);
+    G.gasOff.y += (G.gasTo.y - G.gasOff.y) * Math.min(1, dt * 5);
+  }
+  for (const t of G.tumors) {
+    if (!t.alive) continue;
+    t.flash = Math.max(0, t.flash - dt);
+    if (!frozen) t.mt += dt * (t.kind === 'boss' ? [1, 1, 1.35, 1.65][t.phase] : 1);
+    let dx = 0, dy = 0;
+    if (t.motion === 'breath') { const w = Math.PI * 2 / 4; dx = 11 * Math.sin(w * t.mt); dy = 8 * Math.sin(w * t.mt + 0.6); }
+    else if (t.motion === 'gas') { dx = G.gasOff.x; dy = G.gasOff.y; }
+    else if (t.motion === 'wander') { dx = 56 * Math.sin(0.55 * t.mt); dy = 24 * Math.sin(0.9 * t.mt + 1); }
+    t.x = t.bx + dx; t.y = t.by + dy;
+    if (charKey === 'doctor' && G.sp.active > 0) t.seen = true;
+
+    // spawn cells
+    t.cellT -= dt;
+    if (t.cellT <= 0 && G.cells.length < 20) {
+      t.cellT = t.kind === 'hidden' ? rand(7, 10) : G.st.cellEvery * (t.kind === 'boss' ? (t.phase === 3 ? 0.55 : t.phase === 2 ? 0.75 : 1) : 1) * rand(0.8, 1.2);
+      spawnCell(t);
+    }
+    if (t.kind === 'boss') {
+      const f = t.dose / t.rx, ph = f < 1 / 3 ? 1 : f < 2 / 3 ? 2 : 3;
+      if (ph > t.phase) {
+        t.phase = ph;
+        if (ph === 2) banner('GBM 2단계', '세포 분열 가속 · 탄막 시작', '#ff4d5e', 2.4);
+        if (ph === 3) banner('GBM 3단계 — 저산소 코어', '산소가 없으면 방사선이 덜 먹힙니다 (선량 효과 −20%)', '#ff4d5e', 2.8);
+      }
+      if (G.time - t.lastHit > 1.5 && t.dose > 0) {
+        t.dose = Math.max(0, t.dose - 1.6 * dt);
+        t.regrowMsgT -= dt;
+        if (t.regrowMsgT <= 0) { ftext(t.x, t.y - t.r - 18, '재증식 중…', '#ff9aa6', 11); t.regrowMsgT = 2.5; }
+      }
+      if (t.phase >= 2) {
+        t.burstT -= dt;
+        if (t.burstT <= 0) {
+          t.burstT = t.phase === 3 ? 2.8 : 3.6;
+          const n = t.phase === 3 ? 12 : 8; t.burstA += 0.35;
+          for (let k = 0; k < n; k++) {
+            const a = t.burstA + k * Math.PI * 2 / n;
+            G.eb.push({ x: t.x, y: t.y, vx: Math.cos(a) * 105, vy: Math.sin(a) * 105 + 25, r: 4 });
+          }
+        }
+      }
+    }
+  }
+
+  // cells
+  for (const c of G.cells) {
+    if (c.dead) continue;
+    c.age += dt; c.flash = Math.max(0, c.flash - dt);
+    const slow = c.slow > 0 ? 0.4 : 1; c.slow = Math.max(0, (c.slow || 0) - dt);
+    c.vy += (c.sp - c.vy) * Math.min(1, dt * 1.5);
+    const tx = (s.x - c.x) * 0.25;
+    c.x += (tx + Math.sin(c.age * 2 + c.ph) * 22) * dt * slow;
+    c.y += c.vy * dt * slow;
+    c.x = clamp(c.x, 8, W - 8);
+    if (c.shooter) {
+      c.shootT -= dt;
+      if (c.shootT <= 0 && c.y < s.y - 60) {
+        c.shootT = rand(2.4, 3.2);
+        const d = dist(c.x, c.y, s.x, s.y) || 1;
+        G.eb.push({ x: c.x, y: c.y, vx: (s.x - c.x) / d * 140, vy: (s.y - c.y) / d * 140, r: 3.5 });
+      }
+    }
+    if (dist(c.x, c.y, s.x, s.y) < c.r + 13) { c.dead = true; burst(c.x, c.y, '#ff7a8a', 8, 90); hurt(15, '충돌'); }
+    else if (c.y > H + 6) { c.dead = true; G.stats.escaped++; ftext(c.x, H - 18, '전이!', '#ff4d5e', 12); hurt(8, '전이'); }
+  }
+  G.cells = G.cells.filter(c => !c.dead);
+
+  for (const e of G.eb) {
+    e.x += e.vx * dt; e.y += e.vy * dt;
+    if (dist(e.x, e.y, s.x, s.y) < e.r + 11) { e.dead = true; hurt(6, '피격'); }
+    if (e.y > H + 10 || e.y < HUD_H || e.x < -10 || e.x > W + 10) e.dead = true;
+  }
+  G.eb = G.eb.filter(e => !e.dead);
+
+  if (G.clearT >= 0) {
+    G.clearT -= dt;
+    if (G.clearT < 0) showResult();
+  }
+}
+
+function spawnCell(t) {
+  const a = rand(0.2, Math.PI - 0.2);
+  const st = G.st;
+  G.cells.push({
+    id: uid++, x: t.x + Math.cos(a) * t.r * 0.8, y: t.y + Math.sin(a) * t.r * 0.8,
+    vy: 10, sp: rand(st.cellSpeed[0], st.cellSpeed[1]), r: rand(6.5, 8.5),
+    hp: st.cellHp, age: 0, ph: rand(0, 6), flash: 0,
+    shooter: Math.random() < st.shootChance, shootT: rand(1.5, 2.5), slow: 0,
+  });
+}
+
+function stageClear() {
+  G.clearT = 1.6;
+  for (const c of G.cells) { burst(c.x, c.y, '#ff7a8a', 6, 80); }
+  G.cells = []; G.eb = [];
+  banner('처방선량 100% 도달', 'Beam Off', '#2fd3c5', 1.6);
+}
+
+function gameOver(kind, o) {
+  if (state !== 'play') return;
+  state = 'ending';
+  G.overKind = kind; G.overOar = o;
+  G.shake = 0.5;
+  burst(G.ship.x, G.ship.y, kind === 'hp' ? '#ffb0a0' : '#ff4d5e', 40, 200);
+  setTimeout(showOver, 1000);
+}
+
+/* ============ input ============ */
+const ptrs = new Map(); let dragId = null;
+function toLogical(e) {
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+}
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (state !== 'play' || !G) return;
+  const p = toLogical(e);
+  const info = { sx: p.x, sy: p.y, t: performance.now(), moved: 0, shipX: G.ship.x, shipY: G.ship.y };
+  ptrs.set(e.pointerId, info);
+  if (dragId === null) dragId = e.pointerId;
+  try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+});
+cv.addEventListener('pointermove', e => {
+  const info = ptrs.get(e.pointerId);
+  if (!info || state !== 'play') return;
+  const p = toLogical(e);
+  info.moved = Math.max(info.moved, dist(p.x, p.y, info.sx, info.sy));
+  if (e.pointerId === dragId) {
+    const k = charKey === 'therapist' ? 1.45 : 1.3;
+    G.ship.x = clamp(info.shipX + (p.x - info.sx) * k, SHIP_MIN_X, SHIP_MAX_X);
+    G.ship.y = clamp(info.shipY + (p.y - info.sy) * k, SHIP_MIN_Y, SHIP_MAX_Y);
+  }
+});
+function endPtr(e) {
+  const info = ptrs.get(e.pointerId);
+  ptrs.delete(e.pointerId);
+  if (e.pointerId === dragId) dragId = null;
+  if (!info || state !== 'play') return;
+  const p = toLogical(e);
+  if (performance.now() - info.t < 260 && info.moved < 12 && G.weapon === 'p' && p.y > HUD_H && p.y < IMG_BOTTOM) {
+    fireP(p.x, p.y);
+  }
+}
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); if (e.pointerId === dragId) dragId = null; });
+
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (state === 'play') {
+    if (e.code === 'Digit1') selectWeapon('x');
+    if (e.code === 'Digit2') selectWeapon('e');
+    if (e.code === 'Digit3') selectWeapon('p');
+    if (e.code === 'Digit4') selectWeapon('w');
+    if (e.code === 'Space' || e.code === 'KeyE') { e.preventDefault(); useSpecial(); }
+    if (e.code === 'KeyP' || e.code === 'Escape') pauseGame();
+  } else if (state === 'paused' && (e.code === 'KeyP' || e.code === 'Escape')) resumeGame();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') pauseGame(); });
+
+/* ============ bar UI ============ */
+const wbtns = [...document.querySelectorAll('.wbtn')];
+wbtns.forEach(b => b.addEventListener('pointerdown', e => { e.preventDefault(); if (state === 'play') selectWeapon(b.dataset.w); }));
+$('#sbtn').addEventListener('pointerdown', e => { e.preventDefault(); if (state === 'play') useSpecial(); });
+$('#pause').addEventListener('click', () => pauseGame());
+
+function selectWeapon(w) {
+  if (!G) return;
+  if (G.weapon !== w) G.fireT = Math.max(G.fireT, 0.05);
+  G.weapon = w;
+  wbtns.forEach(b => b.classList.toggle('on', b.dataset.w === w));
+}
+function useSpecial() {
+  if (!G || G.sp.cd > 0 || G.sp.active > 0 || G.clearT >= 0) return;
+  const c = CHARS[charKey];
+  G.sp.active = c.dur; G.sp.cd = c.cd;
+  if (charKey === 'physicist') { G.drift = 0; banner('QA 보호막', '정상 장기 선량 0 · Output 0.0%', c.accent, 2); }
+  if (charKey === 'therapist') banner('호흡 게이팅', '움직임 정지 · 빔 자동 추적', c.accent, 2);
+  if (charKey === 'doctor') banner('윤곽 그리기', '미세 병변 표시 · 암 선량 ×1.3', c.accent, 2);
+}
+function setSpecialUI() {
+  const c = CHARS[charKey || 'doctor'];
+  $('#sname').textContent = c.special;
+  $('#sbtn').style.setProperty('--ca', c.accent);
+}
+let lastUI = '';
+function updateBarUI() {
+  if (!G) return;
+  const pg = wbtns[2].querySelector('.g i'), wg = wbtns[3].querySelector('.g i');
+  pg.style.width = (G.pCharge * 100).toFixed(0) + '%';
+  pg.style.background = G.pCharge >= 1 ? '#ff8a5c' : '#6b4a3c';
+  wg.style.width = G.tank.toFixed(0) + '%';
+  wg.style.background = G.tank > 15 ? '#4aa3ff' : '#ff4d5e';
+  const sb = $('#sbtn'), c = CHARS[charKey];
+  let cd = 0, txt = '준비', cls = 'ready';
+  if (G.sp.active > 0) { txt = `사용 중 ${G.sp.active.toFixed(1)}s`; cls = 'active'; cd = 0; }
+  else if (G.sp.cd > 0) { txt = `${Math.ceil(G.sp.cd)}초`; cls = ''; cd = G.sp.cd / c.cd; }
+  sb.style.setProperty('--cd', cd.toFixed(3));
+  const key = txt + cls;
+  if (key !== lastUI) { lastUI = key; $('#sstat').textContent = txt; sb.className = 'sbtn ' + cls; }
+}
+
+/* ============ render ============ */
+function rr(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+function isoColor(f) {
+  const st = [[0, [50, 90, 255]], [0.5, [0, 215, 255]], [0.8, [70, 255, 120]], [0.95, [255, 225, 60]], [1, [255, 70, 70]]];
+  for (let i = 1; i < st.length; i++) if (f <= st[i][0]) {
+    const [a, ca] = st[i - 1], [b, cb] = st[i], k = (f - a) / (b - a || 1);
+    return ca.map((v, j) => Math.round(v + (cb[j] - v) * k));
+  }
+  return st[st.length - 1][1];
+}
+function blobPath(t, scale) {
+  const n = t.jit.length, pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2, wob = 1 + Math.sin(G.time * 2 + i) * 0.03;
+    const r = t.r * t.jit[i] * wob * (scale || 1);
+    pts.push([t.x + Math.cos(a) * r, t.y + Math.sin(a) * r]);
+  }
+  ctx.beginPath();
+  for (let i = 0; i <= n; i++) {
+    const p = pts[i % n], q = pts[(i + 1) % n], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2;
+    if (i === 0) ctx.moveTo(mx, my); else ctx.quadraticCurveTo(p[0], p[1], mx, my);
+  }
+  ctx.closePath();
+}
+function label(x, y, text, color, size) {
+  ctx.font = `600 ${size || 9}px ${FONT_NUM}`;
+  const w = ctx.measureText(text).width + 8;
+  ctx.fillStyle = 'rgba(4,7,10,.78)'; rr(ctx, x - w / 2, y - 7, w, 13, 3); ctx.fill();
+  ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y);
+}
+
+function drawOARs() {
+  for (const o of G.oars) {
+    const f = Math.min(1, o.dose / o.limit);
+    ctx.beginPath(); ctx.ellipse(o.cx, o.cy, o.rx, o.ry, 0, 0, Math.PI * 2);
+    ctx.globalAlpha = 0.07 + f * 0.38 + o.flash * 1.2;
+    ctx.fillStyle = f > 0.85 ? '#ff4d5e' : o.color; ctx.fill();
+    ctx.globalAlpha = 1;
+    const shield = charKey === 'physicist' && G.sp.active > 0;
+    ctx.strokeStyle = shield ? '#9dffcf' : o.color; ctx.lineWidth = o.flash > 0 ? 2.4 : 1.4;
+    if (shield) ctx.setLineDash([4, 3]);
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  // labels
+  ctx.font = `600 8.5px ${FONT_UI}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  for (const o of G.oars) {
+    ctx.fillStyle = o.color; ctx.globalAlpha = 0.85;
+    const ly = o.ry < 8 ? o.cy - o.ry - 3 : o.cy - o.ry + 11;
+    ctx.fillText(o.name, o.cx, ly);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawTumors() {
+  const reveal = charKey === 'doctor' && G.sp.active > 0;
+  for (const t of G.tumors) {
+    if (!t.alive) continue;
+    const f = t.dose / t.rx;
+    if (t.kind === 'hidden') {
+      if (!reveal && !t.seen) continue;
+      ctx.beginPath(); ctx.arc(t.x, t.y, t.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,120,220,${0.18 + f * 0.4})`; ctx.fill();
+      ctx.setLineDash([3, 2]); ctx.strokeStyle = '#ff9be0'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
+      if (reveal) label(t.x, t.y - t.r - 8, `미세 ${t.dose.toFixed(0)}/${t.rx}`, '#ff9be0', 8);
+      continue;
+    }
+    // tissue mass
+    blobPath(t, 1.0); ctx.fillStyle = 'rgba(120,70,75,.55)'; ctx.fill();
+    // isodose wash
+    if (f > 0.02) {
+      const [r, g, b] = isoColor(f);
+      blobPath(t, 0.92); ctx.fillStyle = `rgba(${r},${g},${b},${0.2 + f * 0.4})`; ctx.fill();
+    }
+    blobPath(t, 1.0);
+    ctx.strokeStyle = t.flash > 0 ? '#fff' : '#ff3b4f'; ctx.lineWidth = 2; ctx.stroke();
+    // PTV margin
+    ctx.beginPath(); ctx.arc(t.x, t.y, t.r * 1.32, 0, Math.PI * 2);
+    ctx.setLineDash(reveal ? [6, 3] : [2, 4]); ctx.strokeStyle = reveal ? '#ff9be0' : 'rgba(255,90,110,.55)'; ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]);
+    if (charKey === 'therapist' && G.sp.active > 0) {
+      ctx.strokeStyle = 'rgba(77,214,255,.8)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(t.x - t.r - 10, t.y); ctx.lineTo(t.x + t.r + 10, t.y); ctx.moveTo(t.x, t.y - t.r - 10); ctx.lineTo(t.x, t.y + t.r + 10); ctx.stroke();
+    }
+    const col = t.kind === 'boss' && t.phase === 3 ? '#ffb0b8' : '#ffd0d6';
+    label(t.x, t.y - t.r * 1.32 - 9, `${t.label} ${t.dose.toFixed(1)} / ${t.rx} Gy`, col, 9);
+    if (t.kind === 'boss') {
+      ctx.font = `700 10px ${FONT_NUM}`; ctx.fillStyle = '#ff6b78'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('★'.repeat(t.phase) + '☆'.repeat(3 - t.phase), t.x, t.y + t.r * 1.32 + 4);
+    }
+  }
+}
+
+function drawCells() {
+  for (const c of G.cells) {
+    const pulse = 1 + Math.sin(c.age * 6 + c.ph) * 0.06;
+    ctx.beginPath(); ctx.arc(c.x, c.y, c.r * pulse, 0, Math.PI * 2);
+    ctx.fillStyle = c.flash > 0 ? '#fff' : (c.shooter ? 'rgba(190,90,230,.55)' : 'rgba(255,90,110,.45)'); ctx.fill();
+    ctx.strokeStyle = c.shooter ? '#d79bff' : '#ff8a98'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(c.x + 1, c.y - 1, c.r * 0.38, 0, Math.PI * 2);
+    ctx.fillStyle = c.shooter ? '#6a2a8a' : '#8a1f2c'; ctx.fill();
+  }
+}
+
+function drawBullets() {
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (const b of G.bullets) {
+    if (b.type === 'x') {
+      const gr = ctx.createLinearGradient(b.x, b.y, b.x - b.vx * 0.022, b.y + 16);
+      gr.addColorStop(0, 'rgba(230,255,255,1)'); gr.addColorStop(1, 'rgba(60,200,255,0)');
+      ctx.strokeStyle = gr; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.022, b.y + 16); ctx.stroke();
+    } else if (b.type === 'e') {
+      const a = 1 - b.travel / b.range;
+      ctx.fillStyle = `rgba(170,150,255,${0.35 + a * 0.65})`;
+      ctx.beginPath(); ctx.arc(b.x, b.y, 2.6, 0, Math.PI * 2); ctx.fill();
+    } else if (b.type === 'w') {
+      ctx.fillStyle = 'rgba(90,170,255,.8)';
+      ctx.beginPath(); ctx.arc(b.x, b.y, 2.4, 0, Math.PI * 2); ctx.fill();
+    } else if (b.type === 'p') {
+      const gr = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, 9);
+      gr.addColorStop(0, 'rgba(255,240,210,1)'); gr.addColorStop(0.4, 'rgba(255,130,80,.8)'); gr.addColorStop(1, 'rgba(255,80,60,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(b.x, b.y, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,140,90,.35)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx * 0.04, b.y - b.vy * 0.04); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawShip(x, y, accent, t, alpha) {
+  ctx.save(); ctx.translate(x, y); ctx.globalAlpha = alpha == null ? 1 : alpha;
+  // engine glow
+  const fl = 0.8 + Math.sin(t * 30) * 0.2;
+  const gr = ctx.createRadialGradient(0, 24, 0, 0, 24, 16 * fl);
+  gr.addColorStop(0, 'rgba(120,255,240,.9)'); gr.addColorStop(1, 'rgba(47,211,197,0)');
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 24, 16 * fl, 0, Math.PI * 2); ctx.fill();
+  // gantry arms (wings)
+  ctx.fillStyle = '#8fa3b0';
+  for (const s of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(s * 9, -2); ctx.lineTo(s * 27, 10); ctx.lineTo(s * 27, 19); ctx.lineTo(s * 9, 16); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = accent; ctx.fillRect(s * 27 - (s > 0 ? 3 : 0), 10, 3, 9); ctx.fillStyle = '#8fa3b0';
+  }
+  // body (treatment head)
+  const bg = ctx.createLinearGradient(-14, 0, 14, 0);
+  bg.addColorStop(0, '#c7d3da'); bg.addColorStop(0.5, '#f4f8fa'); bg.addColorStop(1, '#a9b9c3');
+  ctx.fillStyle = bg; rr(ctx, -14, -14, 28, 38, 7); ctx.fill();
+  // collimator
+  ctx.fillStyle = '#26323b';
+  ctx.beginPath(); ctx.moveTo(-9, -13); ctx.lineTo(-6, -25); ctx.lineTo(6, -25); ctx.lineTo(9, -13); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#7ef3e8'; ctx.fillRect(-3.5, -26, 7, 2.4);
+  // character stripe
+  ctx.fillStyle = accent; ctx.fillRect(-14, 17, 28, 3);
+  // DosiCare mark badge
+  ctx.beginPath(); ctx.arc(0, 3, 11.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.strokeStyle = '#2a4e78'; ctx.lineWidth = 1; ctx.stroke();
+  if (markImg.complete && markImg.naturalWidth) ctx.drawImage(markImg, -10, -7, 20, 20);
+  ctx.restore();
+}
+
+function drawHUD() {
+  const g = ctx;
+  g.fillStyle = 'rgba(8,11,15,.94)'; g.fillRect(0, 0, W, HUD_H);
+  g.fillStyle = '#25333d'; g.fillRect(0, HUD_H - 1, W, 1);
+  const c = CHARS[charKey];
+  // row 1
+  g.textBaseline = 'middle'; g.textAlign = 'left';
+  g.font = `700 10px ${FONT_NUM}`; g.fillStyle = '#2fd3c5'; g.fillText(G.st.fx + ' / 3', 10, 17);
+  g.font = `700 14px ${FONT_UI}`; g.fillStyle = '#dbe5ea'; g.fillText(G.st.short, 58, 17);
+  const nameW = g.measureText(G.st.short).width;
+  g.font = `600 9px ${FONT_UI}`;
+  const chipX = 66 + nameW, cw = g.measureText(c.name).width + 14;
+  g.strokeStyle = c.accent; g.lineWidth = 1; rr(g, chipX, 10, cw, 14, 7); g.stroke();
+  g.fillStyle = c.accent; g.fillText(c.name, chipX + 7, 17.5);
+  g.textAlign = 'right'; g.font = `700 13px ${FONT_NUM}`; g.fillStyle = '#dbe5ea';
+  g.fillText(G.score.toLocaleString('en-US'), W - 52, 17);
+  g.font = `500 8px ${FONT_NUM}`; g.fillStyle = '#7f919d'; g.fillText('SCORE', W - 52, 29);
+  // row 2: hp + output
+  g.textAlign = 'left'; g.font = `600 9px ${FONT_UI}`; g.fillStyle = '#7f919d'; g.fillText('장비', 10, 40);
+  g.fillStyle = '#1d2830'; rr(g, 34, 36, 130, 8, 4); g.fill();
+  const hp = G.ship.hp / 100;
+  g.fillStyle = hp > 0.5 ? '#2fd3c5' : hp > 0.25 ? '#ffb347' : '#ff4d5e'; rr(g, 34, 36, Math.max(4, 130 * hp), 8, 4); g.fill();
+  g.font = `600 9px ${FONT_NUM}`; g.fillStyle = '#dbe5ea'; g.fillText(Math.ceil(G.ship.hp) + '%', 168, 40);
+  const ad = Math.abs(G.drift), oc = ad >= 6 ? '#ff4d5e' : ad >= 3 ? '#ffb347' : '#7f919d';
+  g.fillStyle = '#7f919d'; g.font = `600 9px ${FONT_UI}`; g.fillText('Output', 206, 40);
+  g.font = `700 10px ${FONT_NUM}`; g.fillStyle = oc;
+  g.fillText(`${G.drift >= 0 ? '+' : '−'}${ad.toFixed(1)}%`, 244, 40);
+  // drift bar (-8..+8)
+  g.fillStyle = '#1d2830'; g.fillRect(292, 38, 56, 4);
+  g.fillStyle = '#3a4a55'; g.fillRect(319.5, 35, 1, 10);
+  const dx = clamp(G.drift / 8, -1, 1) * 28;
+  g.fillStyle = oc; g.fillRect(dx >= 0 ? 320 : 320 + dx, 38, Math.abs(dx), 4);
+  // row 3: OAR gauges
+  const n = G.oars.length, gw = (W - 20 - (n - 1) * 8) / n;
+  G.oars.forEach((o, k) => {
+    const x = 10 + k * (gw + 8), f = Math.min(1, o.dose / o.limit);
+    g.textAlign = 'left'; g.font = `600 9px ${FONT_UI}`; g.fillStyle = o.color; g.fillText(o.name, x, 60);
+    g.textAlign = 'right'; g.font = `600 8.5px ${FONT_NUM}`; g.fillStyle = f > 0.85 ? '#ff4d5e' : '#b9c7cf';
+    g.fillText(`${o.dose.toFixed(1)}/${o.limit}`, x + gw, 60);
+    g.fillStyle = '#1d2830'; rr(g, x, 68, gw, 6, 3); g.fill();
+    g.fillStyle = f > 0.85 ? '#ff4d5e' : f > 0.6 ? '#ffb347' : o.color;
+    if (f > 0) { rr(g, x, 68, Math.max(3, gw * f), 6, 3); g.fill(); }
+  });
+  g.textAlign = 'left'; g.font = `500 7.5px ${FONT_NUM}`; g.fillStyle = '#56656f';
+  g.fillText('OAR 선량 제한 (Gy) — 넘으면 플랜 반려', 10, 86);
+}
+
+function drawBanners() {
+  G.banners.forEach((b, k) => {
+    const a = Math.min(1, b.t / 0.15, (b.dur - b.t) / 0.3);
+    const y = HUD_H + 22 + k * 40;
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.font = `700 13px ${FONT_UI}`;
+    const w1 = ctx.measureText(b.text).width;
+    ctx.font = `500 9.5px ${FONT_UI}`;
+    const w = Math.max(w1, ctx.measureText(b.sub).width) + 24;
+    ctx.fillStyle = 'rgba(6,9,12,.86)'; rr(ctx, W / 2 - w / 2, y - 14, w, b.sub ? 34 : 24, 6); ctx.fill();
+    ctx.strokeStyle = b.color; ctx.lineWidth = 1; ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `700 13px ${FONT_UI}`; ctx.fillStyle = b.color; ctx.fillText(b.text, W / 2, y - 2);
+    if (b.sub) { ctx.font = `500 9.5px ${FONT_UI}`; ctx.fillStyle = '#c9d5dc'; ctx.fillText(b.sub, W / 2, y + 12); }
+    ctx.globalAlpha = 1;
+  });
+}
+
+function render() {
+  const g = ctx;
+  g.setTransform(S * DPR, 0, 0, S * DPR, 0, 0);
+  g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+  if (!G) { renderAttract(); return; }
+  g.save();
+  if (G.shake > 0) g.translate(rand(-3, 3) * G.shake * 4, rand(-3, 3) * G.shake * 4);
+  g.drawImage(ctImg, 0, 0, W, H);
+  drawMotes(performance.now() / 1000);
+  drawDoseWash();
+  drawRoomDecor();
+  drawOARs();
+  drawTumors();
+  drawCells();
+  // light field guide
+  const s = G.ship, c = CHARS[charKey];
+  if (state === 'play' && (G.weapon === 'x') && G.interlock <= 0) {
+    const lg = g.createLinearGradient(0, s.y - 30, 0, HUD_H);
+    lg.addColorStop(0, 'rgba(126,243,232,.16)'); lg.addColorStop(1, 'rgba(126,243,232,0)');
+    g.fillStyle = lg; g.fillRect(s.x - 3, HUD_H, 6, s.y - 30 - HUD_H);
+  }
+  drawBullets();
+  for (const e of G.eb) {
+    g.beginPath(); g.arc(e.x, e.y, e.r, 0, Math.PI * 2); g.fillStyle = '#ff9a5a'; g.fill();
+    g.strokeStyle = 'rgba(255,200,150,.6)'; g.lineWidth = 1; g.stroke();
+  }
+  for (const b of G.booms) {
+    const k = b.t / b.dur;
+    g.beginPath(); g.arc(b.x, b.y, b.r * (0.3 + k * 0.7), 0, Math.PI * 2);
+    g.strokeStyle = b.color; g.globalAlpha = 1 - k; g.lineWidth = 3 * (1 - k) + 1; g.stroke();
+    if (b.bragg && k < 0.6) {
+      g.fillStyle = 'rgba(255,170,110,.25)'; g.fill();
+      g.font = `700 8px ${FONT_NUM}`; g.fillStyle = '#ffd2b0'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('BRAGG PEAK', b.x, b.y - b.r - 6);
+    }
+    g.globalAlpha = 1;
+  }
+  for (const p of G.parts) {
+    g.globalAlpha = Math.max(0, p.life / p.max); g.fillStyle = p.color;
+    g.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+  }
+  g.globalAlpha = 1;
+  // ship
+  if (state === 'play' || state === 'paused' || (state === 'ending' && G.overKind === 'oar') || G.clearT >= 0 || state === 'result') {
+    const blink = s.inv > 0 && Math.floor(s.inv * 16) % 2 === 0;
+    drawShip(s.x, s.y, c.accent, G.time, blink ? 0.35 : 1);
+    if (charKey === 'physicist' && G.sp.active > 0) {
+      g.beginPath();
+      for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3 + G.time; const px = s.x + Math.cos(a) * 34, py = s.y + Math.sin(a) * 34; k ? g.lineTo(px, py) : g.moveTo(px, py); }
+      g.closePath(); g.strokeStyle = 'rgba(255,194,77,.85)'; g.lineWidth = 1.6; g.stroke();
+      g.fillStyle = 'rgba(255,194,77,.08)'; g.fill();
+    }
+  }
+  // proton crosshair
+  if (G.weapon === 'p' && state === 'play') {
+    g.strokeStyle = G.pCharge >= 1 ? 'rgba(255,138,92,.9)' : 'rgba(255,138,92,.35)'; g.lineWidth = 1;
+    g.beginPath(); g.arc(s.x, s.y - 26, 16, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * G.pCharge); g.stroke();
+  }
+  if (G.cross) {
+    const k = G.cross.t / 0.9;
+    g.strokeStyle = `rgba(255,170,120,${1 - k})`; g.lineWidth = 1.2;
+    g.beginPath(); g.arc(G.cross.x, G.cross.y, 26, 0, Math.PI * 2);
+    g.moveTo(G.cross.x - 32, G.cross.y); g.lineTo(G.cross.x + 32, G.cross.y);
+    g.moveTo(G.cross.x, G.cross.y - 32); g.lineTo(G.cross.x, G.cross.y + 32); g.stroke();
+  }
+  for (const t of G.texts) {
+    g.globalAlpha = Math.max(0, 1 - t.t / 1.1);
+    g.font = `700 ${t.size}px ${FONT_UI}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(t.text, t.x, t.y);
+    g.fillStyle = t.color; g.fillText(t.text, t.x, t.y);
+  }
+  g.globalAlpha = 1;
+  g.restore();
+
+  // hints
+  if (G.hintT > 0 && state === 'play') {
+    g.globalAlpha = Math.min(1, G.hintT);
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = `700 13px ${FONT_UI}`; g.fillStyle = '#e8fffd'; g.fillText(G.st.hint[0], W / 2, 478);
+    g.font = `500 10px ${FONT_UI}`; g.fillStyle = '#9fb3be'; g.fillText(G.st.hint[1], W / 2, 652);
+    g.globalAlpha = 1;
+  }
+  // interlock
+  if (G.interlock > 0 && state === 'play') {
+    g.fillStyle = 'rgba(255,40,60,.08)'; g.fillRect(0, HUD_H, W, H - HUD_H);
+    const y = 448;
+    g.fillStyle = 'rgba(40,6,10,.92)'; rr(g, 30, y - 18, W - 60, 36, 6); g.fill();
+    g.strokeStyle = '#ff4d5e'; g.lineWidth = 1; g.stroke();
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = `700 11px ${FONT_NUM}`; g.fillStyle = '#ff6b78'; g.fillText('INTERLOCK', W / 2, y - 6);
+    g.font = `600 10px ${FONT_UI}`; g.fillStyle = '#ffd5d9'; g.fillText(G.interlockMsg + ' · 리셋 중', W / 2, y + 8);
+  }
+  drawBanners();
+  drawHUD();
+}
+
+let attractCT = null;
+function renderAttract() {
+  if (!attractCT) attractCT = buildCT(STAGES[0]);
+  const t = performance.now() / 1000;
+  ctx.globalAlpha = 0.75; ctx.drawImage(attractCT, 0, 0, W, H); ctx.globalAlpha = 1;
+  drawMotes(t);
+  const y = 120 + ((t * 60) % 340);
+  ctx.fillStyle = 'rgba(47,211,197,.12)'; ctx.fillRect(0, y, W, 2);
+  ctx.strokeStyle = '#ff3b4f'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(115 + Math.sin(t * 1.6) * 10, 255 + Math.sin(t * 1.6 + 0.6) * 7, 20, 0, Math.PI * 2); ctx.stroke();
+  drawShip(115 + Math.sin(t * 1.6) * 10, 585 + Math.sin(t * 2) * 4, '#2fd3c5', t, 1);
+}
+
+/* ============ screens ============ */
+const scr = $('#screen');
+function show(html) { scr.innerHTML = html; scr.hidden = false; scr.scrollTop = 0; $('#pause').hidden = true; }
+function hide() { scr.hidden = true; $('#pause').hidden = false; }
+
+function showTitle() {
+  state = 'title'; G = null;
+  show(`
+    <div class="brand"><img src="${LOGO}" alt="DosiCare — Expertise &amp; Support"></div>
+    <h1 class="logo">암 퇴치 작전</h1>
+    <div class="tag">Linac Flight Unit · v1</div>
+    <p class="lead">리니악 비행선을 몰고 환자 몸속으로.<br>암에는 처방선량을, 정상 장기에는 최소 선량을.</p>
+    <div class="panel">
+      <div class="kv"><span>암 체력</span><b>처방선량 (Gy)</b></div>
+      <div class="kv"><span>지는 조건</span><b>장기 선량 초과 · 장비 다운</b></div>
+      <div class="kv"><span>치료 횟수</span><b>3 Fx</b></div>
+    </div>
+    <button class="btn" id="go">시작</button>
+    <p class="dim" style="text-align:center;font-size:.72em">숫자는 게임용으로 단순화한 값입니다. 실제 임상 기준이 아닙니다.</p>`);
+  $('#go').onclick = showSelect;
+}
+
+function showSelect() {
+  state = 'select';
+  const cards = Object.entries(CHARS).map(([k, c]) => `
+    <button class="card${charKey === k ? ' sel' : ''}" data-k="${k}" style="--ca:${c.accent}" type="button">
+      ${avatarSVG(k)}
+      <div><div class="cn">${c.name}<span class="cr">${c.role}</span></div>
+      <div class="cs"><b>${c.special}</b> · ${c.sdesc}</div>
+      <div class="cp">평소: ${c.passive}</div></div>
+    </button>`).join('');
+  show(`<h3>출동 인원 선택</h3><h2>누가 빔을 켤까요?</h2><div class="cards">${cards}</div>
+    <button class="btn" id="go" ${charKey ? '' : 'disabled'}>이 사람으로 출동</button>`);
+  scr.querySelectorAll('.card').forEach(b => b.onclick = () => {
+    charKey = b.dataset.k;
+    scr.querySelectorAll('.card').forEach(x => x.classList.toggle('sel', x === b));
+    $('#go').disabled = false;
+  });
+  $('#go').onclick = () => { totalScore = 0; setSpecialUI(); showIntro(0); };
+}
+
+function showIntro(i) {
+  startStage(i);
+  state = 'intro';
+  const st = STAGES[i];
+  const chips = st.oars.map(o => `<span class="chip" style="--c:${o.color}">${o.name} ≤ ${o.limit} Gy</span>`).join('');
+  const tum = st.tumors[0];
+  show(`<div class="fx">${st.fx} / 3</div><h2>${st.title}</h2>
+    <p>${st.intro}</p>
+    <div class="panel">
+      <div class="kv"><span>${tum.label} 처방</span><b>${tum.rx} Gy</b></div>
+      <div class="chips">${chips}</div>
+      <p class="dim" style="font-size:.8em">${st.tip}</p>
+    </div>
+    <button class="btn" id="go">Beam On</button>`);
+  $('#go').onclick = () => { hide(); state = 'play'; };
+}
+
+function gradeOf(maxR, hiddenAll) {
+  if (maxR < 0.6 && hiddenAll) return ['A', '플랜 승인', '교수님이 이 플랜을 학회 발표에 쓰자고 하십니다.', '#2fd3c5'];
+  if (maxR < 0.6) return ['B', '승인', '장기 보호는 훌륭합니다. 숨은 미세 병변을 놓쳐서 A는 아닙니다.', '#9fd8ff'];
+  if (maxR < 0.8) return ['B', '승인', '무난합니다. 차트 정리하고 다음 환자 부르세요.', '#9fd8ff'];
+  return ['C', '겨우 승인', '물리팀이 한숨을 쉬며 재검토 메모를 남겼습니다.', '#ffb347'];
+}
+
+function showResult() {
+  state = 'result';
+  const hid = G.tumors.filter(t => t.kind === 'hidden');
+  const hidDone = hid.filter(t => !t.alive).length;
+  let maxR = 0, oarBonus = 0;
+  const rows = G.oars.map(o => {
+    const f = o.dose / o.limit; maxR = Math.max(maxR, f); oarBonus += Math.round((1 - Math.min(1, f)) * 800);
+    const col = f > 0.85 ? '#ff4d5e' : f > 0.6 ? '#ffb347' : o.color;
+    return `<div class="dvh"><span style="color:${o.color}">${o.name}</span><span class="bar"><i style="width:${(Math.min(1, f) * 100).toFixed(0)}%;background:${col}"></i></span><span class="v">${o.dose.toFixed(1)} / ${o.limit}</span></div>`;
+  }).join('');
+  const hpBonus = Math.round(G.ship.hp * 10);
+  const bonus = oarBonus + hpBonus;
+  totalScore = G.score + bonus;
+  const [gr, gt, gd, gc] = gradeOf(maxR, hidDone === hid.length);
+  const last = G.i === STAGES.length - 1;
+  show(`<div class="fx">${G.st.fx} 완료 · ${G.st.short}</div>
+    <div class="row" style="align-items:center;gap:.9em"><div class="grade" style="color:${gc}">${gr}</div><div><h2 style="font-size:1.4em">${gt}</h2><p class="dim">${gd}</p></div></div>
+    <div class="panel"><h3>장기별 최대 선량 (Gy)</h3>${rows}</div>
+    <div class="panel">
+      <div class="kv"><span>미세 병변 치료</span><b>${hidDone} / ${hid.length}</b></div>
+      <div class="kv"><span>잡은 암세포 · 놓친 세포</span><b>${G.stats.cells} · ${G.stats.escaped}</b></div>
+      <div class="kv"><span>장비 상태</span><b>${Math.ceil(G.ship.hp)}%</b></div>
+      <div class="kv"><span>장기 보호 + 장비 보너스</span><b>+${bonus.toLocaleString('en-US')}</b></div>
+    </div>
+    <div class="big">${totalScore.toLocaleString('en-US')}</div>
+    <button class="btn" id="go">${last ? '치료 종료' : '다음 치료 (' + STAGES[G.i + 1].fx + ')'}</button>`);
+  $('#go').onclick = () => last ? showVictory() : showIntro(G.i + 1);
+}
+
+function showOver() {
+  state = 'over';
+  let title, why, joke;
+  if (G.overKind === 'oar') {
+    const o = G.overOar;
+    title = '플랜 반려';
+    why = `${o.name} 선량 제한 ${o.limit} Gy 초과`;
+    joke = o.name === '척수' ? '척수는 한 번 넘으면 끝입니다. 사고 보고서 쓰러 가세요.'
+      : o.name.includes('수정체') ? '환자분이 내년에 백내장 수술을 받으시게 됐습니다.'
+      : o.name === '직장' ? '소화기내과에서 전화가 왔습니다. 받으시겠어요?'
+      : '선량 제약을 다시 확인하고 플랜을 새로 짜세요.';
+  } else {
+    title = '장비 다운';
+    why = '리니악 상태 0%';
+    joke = '서비스 엔지니어 도착까지 4시간… 대기실 환자분들 표정이 어둡습니다.';
+  }
+  show(`<div class="fx">${G.st.fx} · ${G.st.short}</div><h2 style="color:#ff4d5e">${title}</h2>
+    <p><b>${why}</b></p><p class="dim">${joke}</p>
+    <div class="row"><button class="btn" id="re">이 치료 다시</button><button class="btn ghost" id="home">처음으로</button></div>`);
+  $('#re').onclick = () => { totalScore = stageStartScore; showIntro(G.i); };
+  $('#home').onclick = showTitle;
+}
+
+function showVictory() {
+  state = 'victory';
+  const c = CHARS[charKey];
+  show(`<div class="tag">Course complete · 3 / 3 Fx</div><h2 style="text-align:center">전 과정 치료 완료</h2>
+    <div style="width:6em;margin:0 auto">${avatarSVG(charKey)}</div>
+    <p class="lead">환자분 퇴원하십니다.<br><span class="dim">다음 외래: 3개월 뒤 추적 CT</span></p>
+    <div class="big">${totalScore.toLocaleString('en-US')}</div>
+    <p class="dim" style="text-align:center">${c.name} 덕분에 오늘도 정시 퇴근… 은 아니고 30분 초과.</p>
+    <div class="brand sm"><img src="${LOGO}" alt="DosiCare"></div>
+    <div class="row"><button class="btn" id="again">다른 사람으로 다시</button><button class="btn ghost" id="home">처음으로</button></div>`);
+  $('#again').onclick = showSelect;
+  $('#home').onclick = showTitle;
+}
+
+function pauseGame() {
+  if (state !== 'play') return;
+  state = 'paused';
+  show(`<h3>Beam Off</h3><h2>일시정지</h2>
+    <div class="panel"><p class="dim" style="font-size:.82em">조작: 끌어서 이동 · 빔 자동 · 양성자는 화면을 톡<br>PC: 방향키/WASD 이동 · 1–4 무기 · Space 특기 · P 일시정지</p></div>
+    <button class="btn" id="res">계속하기</button><button class="btn ghost" id="quit">그만하고 처음으로</button>`);
+  $('#res').onclick = resumeGame;
+  $('#quit').onclick = showTitle;
+}
+function resumeGame() { if (state === 'paused') { hide(); state = 'play'; } }
+
+/* ============ loop ============ */
+let last = 0;
+function frame(ts) {
+  const dt = Math.min(0.033, (ts - last) / 1000 || 0); last = ts;
+  if (G && (state === 'play' || state === 'ending')) update(dt);
+  render();
+  if (state === 'play') updateBarUI();
+  requestAnimationFrame(frame);
+}
+
+layout();
+showTitle();
+requestAnimationFrame(frame);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {});
+</script>
+</body>
+</html>
